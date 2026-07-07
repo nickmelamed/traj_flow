@@ -16,3 +16,7 @@ See `data/SCHEMA.md` for column definitions and `CLAUDE.md` for the phase plan.
 | 3 | Transformer (pretrained, easy-only) | test | all | 1626 | 0.6016 | 1.0856 | 0.0726 | trained on easy scenes only; test/hard measures out-of-distribution generalization pre-fine-tune |
 | 3 | Transformer (pretrained, easy-only) | test | easy | 747 | 0.5078 | 0.9379 | 0.0482 | trained on easy scenes only; test/hard measures out-of-distribution generalization pre-fine-tune |
 | 3 | Transformer (pretrained, easy-only) | test | hard | 879 | 0.6813 | 1.2110 | 0.0933 | trained on easy scenes only; test/hard measures out-of-distribution generalization pre-fine-tune |
+| 4 | Transformer (fine-tuned-v1, hard) | val | all | 701 | 2.1751 | 4.8478 | 0.4080 | model selection metric (best checkpoint by val minADE, starting from Phase 3 pretrained weights) |
+| 4 | Transformer (fine-tuned-v1, hard) | test | all | 1626 | 0.6814 | 1.2796 | 0.0689 |  |
+| 4 | Transformer (fine-tuned-v1, hard) | test | easy | 747 | 0.6613 | 1.2552 | 0.0616 |  |
+| 4 | Transformer (fine-tuned-v1, hard) | test | hard | 879 | 0.6985 | 1.3004 | 0.0751 | primary Phase 4 comparison metric (pretrained vs fine-tuned) -- with only 6 train scenes total, fine-tuning can improve val minADE while still regressing on test generalization (scene-specific overfitting); compare against the Phase 3 pretrained row above and see README limitations for the actual direction observed |
