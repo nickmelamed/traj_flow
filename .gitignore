@@ -13,4 +13,5 @@ models/checkpoints/
 *.ckpt
 *.pt
 *.joblib
+hitl/flagged.parquet
 corrections/
