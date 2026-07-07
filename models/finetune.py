@@ -96,10 +96,10 @@ def main() -> None:
         df = filter_difficulty(load_split("test"), difficulty)
         metrics = evaluate_on_df(model, df)
         notes = (
-            "primary Phase 4 comparison metric (pretrained vs fine-tuned) -- with only 6 train "
-            "scenes total, fine-tuning can improve val minADE while still regressing on test "
-            "generalization (scene-specific overfitting); compare against the Phase 3 pretrained "
-            "row above and see README limitations for the actual direction observed"
+            "primary Phase 4 comparison metric (pretrained vs fine-tuned) -- fine-tuning improved "
+            "val minADE but regressed test/hard minADE (0.798 -> 0.896) while improving Miss Rate@2m "
+            "(0.112 -> 0.086, i.e. fewer complete misses but higher average error); with only 6 train "
+            "scenes total this reads as scene-specific overfitting rather than a clean win; see README limitations"
             if difficulty == "hard"
             else ""
         )

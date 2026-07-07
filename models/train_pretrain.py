@@ -115,7 +115,11 @@ def main() -> None:
             eval_split="test",
             difficulty=difficulty,
             metrics=metrics,
-            notes="trained on easy scenes only; test/hard measures out-of-distribution generalization pre-fine-tune",
+            notes="trained on easy scenes only; test/hard measures out-of-distribution generalization pre-fine-tune. "
+            "Note: removing the leaked absolute-heading feature (see XGBoost row) made this model's test metrics "
+            "slightly worse, not better (test/all minADE was 0.602 with heading included) -- unlike XGBoost, the "
+            "transformer apparently extracted some real (if likely non-generalizable) signal from it; kept removed "
+            "for methodological consistency/frame-invariance, see README limitations",
         )
         print(f"[Pretrained] test/{difficulty}: {metrics}")
 

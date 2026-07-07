@@ -24,7 +24,14 @@ from torch.utils.data import Dataset
 
 from data.preprocess import FUTURE_STEPS, PAST_STEPS
 
-N_SCALAR_FEATS = 4  # velocity, acceleration, heading, heading_change_rate
+N_SCALAR_FEATS = 3  # velocity, acceleration, heading_change_rate
+# NOTE: raw `heading` (absolute global-frame yaw) is deliberately excluded.
+# Every other feature here is agent-frame/rotation-invariant; absolute
+# heading is tied to each scene's specific road orientation and its mean
+# differs meaningfully across train/val/test (disjoint scenes), so the model
+# could pick up spurious train-scene-orientation associations that don't
+# transfer. `heading_change_rate` (a rate, not an absolute angle) is
+# rotation-invariant and stays.
 N_NEIGHBORS = 3
 CONTEXT_DIM = (N_SCALAR_FEATS * 2) + (N_NEIGHBORS * 2) + N_NEIGHBORS + 2  # scalars+valid, neighbor feats, neighbor-valid, density, intersection
 
@@ -38,7 +45,7 @@ class TrajectoryDataset(Dataset):
         past_y = np.nan_to_num(past_y, nan=0.0)
         self.past_seq = np.stack([past_x, past_y, past_valid], axis=-1).astype(np.float32)  # [N, P, 3]
 
-        scalars = df[["velocity", "acceleration", "heading", "heading_change_rate"]].to_numpy(dtype=np.float32)
+        scalars = df[["velocity", "acceleration", "heading_change_rate"]].to_numpy(dtype=np.float32)
         scalar_valid = (~np.isnan(scalars)).astype(np.float32)
         scalars = np.nan_to_num(scalars, nan=0.0)
 

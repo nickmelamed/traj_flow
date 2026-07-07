@@ -31,7 +31,13 @@ FUTURE_STEPS = 12
 FEATURE_COLS = [
     "velocity",
     "acceleration",
-    "heading",
+    # NOTE: raw `heading` (absolute global-frame yaw) is deliberately excluded.
+    # Every other feature here is agent-frame/rotation-invariant; absolute
+    # heading is tied to each scene's specific road orientation and its mean
+    # differs meaningfully across train/val/test (disjoint scenes), so a tree
+    # model can pick up spurious train-scene-orientation associations that
+    # don't transfer. `heading_change_rate` (a rate, not an absolute angle)
+    # is rotation-invariant and stays.
     "heading_change_rate",
     "past_x_0",
     "past_y_0",
@@ -102,7 +108,7 @@ def main() -> None:
             eval_split="test",
             difficulty=difficulty,
             metrics=metrics,
-            notes="underperforms CV: trees underestimate displacement for higher-speed agents (can't extrapolate past training-range leaf values); see README limitations",
+            notes="still underperforms CV, but the gap narrowed substantially (was minADE 1.656 on test/all) after removing a leaked absolute-heading feature that doesn't generalize across scenes; remaining gap likely still trees underestimating displacement for higher-speed agents; see README limitations",
         )
         print(f"[XGBoost] test/{difficulty}: {metrics}")
 
