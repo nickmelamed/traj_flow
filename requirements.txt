@@ -1,0 +1,11 @@
+torch==2.12.1
+nuscenes-devkit==1.2.0
+xgboost==3.2.0
+streamlit==1.59.0
+pandas==3.0.3
+numpy==1.26.4
+matplotlib==3.11.0
+plotly==6.8.0
+pyarrow==24.0.0
+scikit-learn==1.9.0
+tqdm==4.68.3

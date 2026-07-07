@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# nuScenes raw data (large, not committed)
+data/nuscenes/
+data/raw/
+
+# processed data + model artifacts (large, regenerable)
+data/processed/
+*.ckpt
+*.pt
+corrections/
