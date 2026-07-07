@@ -22,8 +22,8 @@ state-of-the-art model.
 ## Setup
 
 ```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
+python3.11 -m venv traj
+source traj/bin/activate
 pip install -r requirements.txt
 ```
 
