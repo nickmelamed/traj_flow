@@ -9,6 +9,8 @@ data/raw/
 
 # processed data + model artifacts (large, regenerable)
 data/processed/
+models/checkpoints/
 *.ckpt
 *.pt
+*.joblib
 corrections/
