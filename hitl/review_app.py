@@ -8,8 +8,10 @@ For each flagged example the reviewer sees: the agent's past trajectory,
 nearby lane geometry (map context), the ground-truth future, the
 transformer's K=6 candidate futures (opacity = mode probability), and the
 XGBoost baseline's prediction -- then can accept the ground truth as-is,
-edit the future waypoints directly, or tag a failure mode. Every decision
-is persisted to corrections/corrections.parquet, keyed by
+correct it by adjusting the car's position at 3 key moments (2s/4s/6s
+into the future, auto-smoothed into the 12 required timesteps via a
+cubic spline, with a live plot preview), or tag a failure mode. Every
+decision is persisted to corrections/corrections.parquet, keyed by
 (instance_token, sample_token) so re-running the app resumes where you
 left off (re-submitting the same example overwrites its prior entry).
 """
@@ -30,14 +32,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import joblib
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
+import torch
+from scipy.interpolate import CubicSpline
 
 from models.baseline_xgb import MODEL_PATH as XGB_MODEL_PATH
 from models.baseline_xgb import make_features as xgb_make_features
 from evaluation.evaluate import load_split
-
-import matplotlib.pyplot as plt
-import torch
 
 from nuscenes.map_expansion.arcline_path_utils import discretize_lane
 from nuscenes.map_expansion.map_api import NuScenesMap
@@ -53,6 +55,10 @@ CORRECTIONS_PATH = Path(__file__).resolve().parent.parent / "corrections" / "cor
 TRANSFORMER_CHECKPOINT = Path(__file__).resolve().parent.parent / "models" / "checkpoints" / "finetuned_v1.pt"
 MAP_RADIUS = 40.0
 FAILURE_MODES = ["none", "occlusion", "aggressive merge", "sensor noise", "map ambiguity"]
+FUTURE_SECONDS = 6.0
+DT = FUTURE_SECONDS / FUTURE_STEPS  # 0.5s per step, matching the rest of the codebase
+KEY_TIMES = [2.0, 4.0, 6.0]  # seconds; the 3 adjustable checkpoints
+KEY_INDICES = [int(round(t / DT)) - 1 for t in KEY_TIMES]  # corresponding 0-indexed rows in future_x/y
 
 
 @st.cache_resource
@@ -121,43 +127,74 @@ def nearby_lane_polylines(map_name: str, x: float, y: float, translation: tuple,
     return polylines
 
 
-def make_plot(row, traj: np.ndarray, logits: np.ndarray, xgb_pred: np.ndarray, map_polylines: list):
-    fig, ax = plt.subplots(figsize=(6, 6))
+def spline_from_keypoints(key_points: list) -> np.ndarray:
+    """Fit a natural cubic spline from the origin (agent's current position,
+    t=0) through the 3 key points at KEY_TIMES seconds, then evaluate it at
+    the 12 canonical timesteps. Returns [FUTURE_STEPS, 2].
+    """
+    times = np.concatenate([[0.0], KEY_TIMES])
+    xs = np.concatenate([[0.0], [p[0] for p in key_points]])
+    ys = np.concatenate([[0.0], [p[1] for p in key_points]])
+
+    spline_x = CubicSpline(times, xs)
+    spline_y = CubicSpline(times, ys)
+
+    canonical_times = np.arange(1, FUTURE_STEPS + 1) * DT
+    return np.stack([spline_x(canonical_times), spline_y(canonical_times)], axis=-1)
+
+
+def make_plot(row, traj: np.ndarray, logits: np.ndarray, xgb_pred: np.ndarray, map_polylines: list, spline_xy: np.ndarray = None, key_points: list = None):
+    fig = go.Figure()
 
     for poly in map_polylines:
-        ax.plot(poly[:, 0], poly[:, 1], color="lightgray", linewidth=1, zorder=0)
+        fig.add_trace(go.Scatter(x=poly[:, 0], y=poly[:, 1], mode="lines", line=dict(color="lightgray", width=1), hoverinfo="skip", showlegend=False))
 
     past_x = np.array([row[f"past_x_{i}"] for i in range(PAST_STEPS)])
     past_y = np.array([row[f"past_y_{i}"] for i in range(PAST_STEPS)])
     valid = ~np.isnan(past_x)
-    ax.plot(np.r_[past_x[valid], 0], np.r_[past_y[valid], 0], "o-", color="tab:blue", label="past", zorder=3)
+    fig.add_trace(go.Scatter(x=np.r_[past_x[valid], 0], y=np.r_[past_y[valid], 0], mode="lines+markers", line=dict(color="royalblue"), name="past"))
 
     future_x = np.array([row[f"future_x_{i}"] for i in range(FUTURE_STEPS)])
     future_y = np.array([row[f"future_y_{i}"] for i in range(FUTURE_STEPS)])
-    ax.plot(np.r_[0, future_x], np.r_[0, future_y], "-", color="black", linewidth=2.5, label="ground truth", zorder=4)
 
     probs = torch.softmax(torch.from_numpy(logits), dim=-1).numpy()
     for k in range(traj.shape[0]):
-        label = "transformer modes" if k == 0 else None
-        ax.plot(
-            np.r_[0, traj[k, :, 0]],
-            np.r_[0, traj[k, :, 1]],
-            "-",
-            color="tab:orange",
-            alpha=float(0.15 + 0.85 * probs[k]),
-            linewidth=1.5,
-            zorder=2,
-            label=label,
-        )
+        fig.add_trace(go.Scatter(
+            x=np.r_[0, traj[k, :, 0]], y=np.r_[0, traj[k, :, 1]], mode="lines",
+            line=dict(color=f"rgba(255,140,0,{0.15 + 0.85 * float(probs[k]):.3f})", width=2),
+            name="transformer modes" if k == 0 else None, showlegend=(k == 0),
+        ))
 
-    ax.plot(np.r_[0, xgb_pred[:, 0]], np.r_[0, xgb_pred[:, 1]], "--", color="tab:red", label="XGBoost", zorder=2)
+    fig.add_trace(go.Scatter(x=np.r_[0, xgb_pred[:, 0]], y=np.r_[0, xgb_pred[:, 1]], mode="lines", line=dict(color="crimson", width=2, dash="dash"), name="XGBoost"))
 
-    ax.scatter([0], [0], color="black", marker="x", s=60, zorder=5)
-    ax.set_xlabel("x (m, agent frame)")
-    ax.set_ylabel("y (m, agent frame, heading = +y)")
-    ax.set_aspect("equal")
-    ax.legend(loc="upper left", fontsize=8)
-    ax.set_title(f"{row['scene_name']} | difficulty={row['difficulty']} | uncertainty={row['uncertainty_score']:.2f}")
+    # Ground truth is added AFTER transformer modes / XGBoost (and given a
+    # bold, otherwise-unused color) so it draws on top and isn't hidden when
+    # a prediction line sits almost exactly on top of it -- with black,
+    # drawn earlier, that was silently swallowing the ground truth line in
+    # examples where the transformer's prediction closely matched reality.
+    fig.add_trace(go.Scatter(x=np.r_[0, future_x], y=np.r_[0, future_y], mode="lines", line=dict(color="magenta", width=3), name="ground truth"))
+
+    if spline_xy is not None:
+        fig.add_trace(go.Scatter(x=np.r_[0, spline_xy[:, 0]], y=np.r_[0, spline_xy[:, 1]], mode="lines", line=dict(color="green", width=3), name="your correction"))
+
+    if key_points is not None:
+        fig.add_trace(go.Scatter(
+            x=[p[0] for p in key_points], y=[p[1] for p in key_points], mode="markers+text",
+            marker=dict(color="green", size=12, symbol="circle", line=dict(color="white", width=1)),
+            text=[f"{t:g}s" for t in KEY_TIMES], textposition="top center", name="your key points",
+        ))
+
+    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers", marker=dict(color="magenta", size=16, symbol="x", line=dict(width=3, color="magenta")), name="current position"))
+
+    fig.update_layout(
+        template="plotly_white",  # explicit light background, independent of Streamlit's theme
+        # (dark theme was rendering the black ground-truth line invisible against a near-black plot bg)
+        xaxis_title="x (m, agent frame)", yaxis_title="y (m, agent frame, heading = +y)",
+        yaxis=dict(scaleanchor="x", scaleratio=1),
+        title=dict(text=f"{row['scene_name']} | difficulty={row['difficulty']} | uncertainty={row['uncertainty_score']:.2f}", y=0.98),
+        height=650, margin=dict(l=10, r=10, t=60, b=80),
+        legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="center", x=0.5),
+    )
     return fig
 
 
@@ -197,11 +234,12 @@ def main() -> None:
         st.session_state.idx += 1
     st.session_state.idx = min(max(st.session_state.idx, 0), max(n_total - 1, 0))
 
-    row = flagged.iloc[st.session_state.idx]
+    idx = st.session_state.idx
+    row = flagged.iloc[idx]
     key = (row["instance_token"], row["sample_token"])
     already_reviewed = key in reviewed_keys
     st.write(
-        f"### Example {st.session_state.idx + 1} / {n_total}"
+        f"### Example {idx + 1} / {n_total}"
         + (" — _already reviewed (saving again will overwrite)_" if already_reviewed else "")
     )
 
@@ -224,11 +262,16 @@ def main() -> None:
 
     polylines = nearby_lane_polylines(row["map_name"], x, y, tuple(ann["translation"]), tuple(ann["rotation"]), MAP_RADIUS)
 
-    col_plot, col_review = st.columns([2, 1])
-    with col_plot:
-        fig = make_plot(row, traj, logits, xgb_pred, polylines)
-        st.pyplot(fig)
+    future_x = np.array([row[f"future_x_{i}"] for i in range(FUTURE_STEPS)])
+    future_y = np.array([row[f"future_y_{i}"] for i in range(FUTURE_STEPS)])
 
+    col_plot, col_review = st.columns([2, 1])
+
+    # NOTE: col_review's widgets are read here, BEFORE col_plot is drawn
+    # below, even though col_plot renders on the left -- st.columns() fixes
+    # each column's on-screen position independently of which one your code
+    # writes to first, so this lets the plot include a live preview built
+    # from the values just entered.
     with col_review:
         st.write("**Scene context**")
         st.write(f"- Map: `{row['map_name']}`")
@@ -238,48 +281,85 @@ def main() -> None:
         st.write(f"- XGB/Transformer divergence: `{row['xgb_transformer_divergence']:.2f}` m")
         st.write(f"- Uncertainty score (percentile rank): `{row['uncertainty_score']:.3f}`")
 
-        future_x = np.array([row[f"future_x_{i}"] for i in range(FUTURE_STEPS)])
-        future_y = np.array([row[f"future_y_{i}"] for i in range(FUTURE_STEPS)])
+        decision = st.radio(
+            "Decision", ["Accept ground truth as-is", "Correct trajectory", "Skip"], key=f"decision_{idx}"
+        )
 
-        with st.form(key=f"form_{st.session_state.idx}"):
-            decision = st.radio("Decision", ["Accept ground truth as-is", "Correct trajectory", "Skip"])
+        key_points = None
+        spline_xy = None
+        if decision == "Correct trajectory":
+            st.caption(
+                "Adjust the car's position at 3 key moments below; the plot updates live with a green "
+                "preview and a smooth path is auto-fit through them to fill the 12-row table beneath it "
+                "(pre-filled from the ground truth -- only the numbers you actually change matter)."
+            )
+            key_points = []
+            cols = st.columns(3)
+            for t, t_idx, col in zip(KEY_TIMES, KEY_INDICES, cols):
+                with col:
+                    st.write(f"**~{t:g}s**")
+                    kx = st.number_input("x", value=float(future_x[t_idx]), key=f"kp_{idx}_{t}_x", format="%.2f")
+                    ky = st.number_input("y", value=float(future_y[t_idx]), key=f"kp_{idx}_{t}_y", format="%.2f")
+                    key_points.append((kx, ky))
+            spline_xy = spline_from_keypoints(key_points)
+            table_default = spline_xy
+        else:
+            table_default = np.stack([future_x, future_y], axis=-1)
 
-            st.caption("Editable future waypoints (agent frame, meters) — only used if 'Correct trajectory' is chosen")
-            edit_df = pd.DataFrame({"x": future_x, "y": future_y})
-            edited = st.data_editor(edit_df, key=f"editor_{st.session_state.idx}", num_rows="fixed")
+        st.caption("Full 12-waypoint table (auto-filled above; edit individual cells here if you want finer control).")
+        edit_df = pd.DataFrame({"x": table_default[:, 0], "y": table_default[:, 1]})
+        # Keying on the key-point values forces the editor to re-initialize
+        # from the latest spline fit whenever they change; manual edits made
+        # at a given set of key-point values are preserved until they change.
+        editor_key_suffix = hash(tuple(key_points[0] + key_points[1] + key_points[2])) if key_points else "flat"
+        edited = st.data_editor(edit_df, key=f"editor_{idx}_{editor_key_suffix}", num_rows="fixed")
 
-            failure_mode = st.selectbox("Failure mode tag", FAILURE_MODES)
-            notes = st.text_area("Reviewer notes")
-
-            submitted = st.form_submit_button("Save review")
-
-        if submitted:
-            if decision == "Correct trajectory":
-                corrected_x = edited["x"].to_numpy(dtype=float)
-                corrected_y = edited["y"].to_numpy(dtype=float)
+        edited_x = edited["x"].to_numpy(dtype=float)
+        edited_y = edited["y"].to_numpy(dtype=float)
+        max_change = float(np.max(np.abs(np.r_[edited_x - future_x, edited_y - future_y])))
+        n_changed_rows = int(np.sum((edited_x != future_x) | (edited_y != future_y)))
+        if decision == "Correct trajectory":
+            if max_change == 0.0:
+                st.warning("No changes detected yet — adjust the key points above before saving.")
             else:
-                corrected_x = future_x
-                corrected_y = future_y
+                st.info(f"{n_changed_rows} / {FUTURE_STEPS} waypoints changed (max change {max_change:.2f} m).")
 
-            record = {
-                "instance_token": row["instance_token"],
-                "sample_token": row["sample_token"],
-                "scene_name": row["scene_name"],
-                "difficulty": row["difficulty"],
-                "decision": decision,
-                "failure_mode": failure_mode,
-                "reviewer_notes": notes,
-                "reviewed_at": datetime.now(timezone.utc).isoformat(),
-            }
-            for i in range(FUTURE_STEPS):
-                record[f"corrected_future_x_{i}"] = float(corrected_x[i])
-                record[f"corrected_future_y_{i}"] = float(corrected_y[i])
+        failure_mode = st.selectbox("Failure mode tag", FAILURE_MODES, key=f"failure_mode_{idx}")
+        notes = st.text_area("Reviewer notes", key=f"notes_{idx}")
 
-            save_correction(record)
-            st.success("Saved.")
-            if st.session_state.idx < n_total - 1:
-                st.session_state.idx += 1
-            st.rerun()
+        submitted = st.button("Save review", key=f"submit_{idx}")
+
+    with col_plot:
+        fig = make_plot(row, traj, logits, xgb_pred, polylines, spline_xy=spline_xy, key_points=key_points)
+        st.plotly_chart(fig, key=f"plot_{idx}", theme=None)
+
+    if submitted:
+        if decision == "Correct trajectory":
+            corrected_x = edited_x
+            corrected_y = edited_y
+        else:
+            corrected_x = future_x
+            corrected_y = future_y
+
+        record = {
+            "instance_token": row["instance_token"],
+            "sample_token": row["sample_token"],
+            "scene_name": row["scene_name"],
+            "difficulty": row["difficulty"],
+            "decision": decision,
+            "failure_mode": failure_mode,
+            "reviewer_notes": notes,
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+        }
+        for i in range(FUTURE_STEPS):
+            record[f"corrected_future_x_{i}"] = float(corrected_x[i])
+            record[f"corrected_future_y_{i}"] = float(corrected_y[i])
+
+        save_correction(record)
+        st.success("Saved.")
+        if st.session_state.idx < n_total - 1:
+            st.session_state.idx += 1
+        st.rerun()
 
 
 if __name__ == "__main__":
