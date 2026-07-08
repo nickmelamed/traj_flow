@@ -132,12 +132,17 @@ def metrics_tab() -> None:
     fig.update_layout(showlegend=False, height=400)
     st.plotly_chart(fig, theme=None, key="metrics_bar")
 
-    st.subheader("Full table (sortable)")
+    show_all = st.checkbox(
+        "Show all phases/splits/difficulties (unfiltered)", value=False,
+        help="Unchecked: table matches the chart above (same split/difficulty). Checked: every row ever logged.",
+    )
+    st.subheader("Filtered table (matches the chart above)" if not show_all else "Full table (all rows, unfiltered)")
     st.caption(
         "Every model / eval-split / difficulty-filter combination logged so far. "
         "Click a column header to sort. Source: results/metrics_comparison.md."
     )
-    st.dataframe(df.drop(columns=["Notes"]), width="stretch", height=400)
+    table_df = df if show_all else filtered
+    st.dataframe(table_df.drop(columns=["Notes"]).sort_values(metric), width="stretch", height=400)
 
     with st.expander("Notes for the rows above (methodology caveats, honest findings)"):
         for _, row in filtered.iterrows():
