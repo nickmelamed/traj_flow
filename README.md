@@ -3,13 +3,16 @@
 A trajectory prediction pipeline for autonomous vehicles, built on nuScenes
 **mini**, combining three things in one project:
 
-1. **Classical ML baselines** — constant-velocity and XGBoost models.
-2. **A fine-tuned deep learning model** — a compact (108k-parameter)
+1. **Classical ML baselines** — constant-velocity, constant-acceleration,
+   and XGBoost models.
+2. **Two deep learning architectures** — a compact (108k-parameter)
    trajectory transformer, pretrained on "easy" driving scenes and
-   fine-tuned on "hard" ones (dense traffic / intersections).
-3. **A human-in-the-loop (HITL) active learning loop** — the model's most
-   uncertain predictions are flagged, reviewed and corrected by a human via
-   a Streamlit app, and fed back into a second fine-tuning round.
+   fine-tuned on "hard" ones (dense traffic / intersections); and a
+   compact (41k-parameter) LSTM encoder-decoder trained on the full
+   dataset as an architecture comparison point.
+3. **A human-in-the-loop (HITL) active learning loop** — the transformer's
+   most uncertain predictions are flagged, reviewed and corrected by a
+   human via a Streamlit app, and fed back into a second fine-tuning round.
 
 This is a portfolio project for autonomy / planning & prediction engineering
 roles. It prioritizes an honestly-measured, end-to-end pipeline over a
@@ -42,13 +45,16 @@ Each stage is a standalone script, run in order from the repo root:
 python data/download.py                 # check/extract nuScenes mini + map expansion
 python data/preprocess.py                # feature engineering, easy/hard split, train/val/test parquet
 python models/baseline_cv.py             # constant-velocity baseline
+python models/baseline_ca.py             # constant-acceleration baseline
 python models/baseline_xgb.py            # XGBoost baseline
 python models/train_pretrain.py          # pretrain transformer on "easy" scenes
 python models/finetune.py                # fine-tune on "hard" scenes -> fine-tuned-v1
 python hitl/flag_uncertain.py            # flag top ~10% most uncertain hard-train examples
 streamlit run hitl/review_app.py         # human review + correction (interactive)
 python models/finetune_round2.py         # fine-tune round 2 on HITL-corrected data -> fine-tuned-v2
+python models/train_lstm.py              # train the LSTM comparison architecture (full train split)
 python viz/scene_overlay.py              # generate the figures below
+python evaluation/moving_subset_analysis.py  # log every model's performance on genuinely moving vehicles
 streamlit run viz/dashboard.py           # interactive results dashboard (see below)
 ```
 
@@ -67,8 +73,9 @@ review app (no correction controls, just exploration):
 - **Scene Browser tab**: pick any test example (with an easy/hard filter
   and a "moving vehicles only" filter — see below) and see history,
   ground truth, and *every* model's prediction (constant velocity,
-  XGBoost, and all three transformer checkpoints) overlaid on the map,
-  with a per-example error table underneath.
+  constant acceleration, XGBoost, all three transformer checkpoints, and
+  the LSTM) overlaid on the map, with a per-example error table
+  underneath.
 
 ## Data
 
@@ -102,9 +109,28 @@ strawman.
 ## Methodology
 
 **Phase 2 — classical baselines.** Constant velocity extrapolates the
-final observed velocity linearly. XGBoost (`MultiOutputRegressor` over
-`XGBRegressor`) predicts the 24-dim flattened future waypoint vector from
-engineered features, trained on the full train split.
+final observed velocity linearly. Constant acceleration extends this with
+an acceleration vector estimated from a double finite-difference of the
+two most recent past positions, then extrapolates `pos(t) = v*t +
+0.5*a*t^2` — added in a later pass to broaden the classical comparison.
+XGBoost (`MultiOutputRegressor` over `XGBRegressor`) predicts the 24-dim
+flattened future waypoint vector from engineered features, trained on the
+full train split.
+
+**An LSTM comparison architecture** (`models/lstm.py`, also added in a
+later pass): an LSTM encodes 2s of past motion, fused with the same
+context vector the transformer uses, and decodes K=6 candidate futures
+autoregressively (one `LSTMCell` step per future timestep, feeding each
+predicted position delta back in as the next input) rather than the
+transformer's parallel attention-based decoding. Trained on the **full**
+train split (both easy and hard, one training run) — unlike the
+transformer's pretrain/fine-tune/HITL-fine-tune lineage below, this model
+is a standalone architecture-comparison point, not part of that pipeline.
+Same `TrajectoryDataset` and min-of-K + cross-entropy loss as the
+transformer, so the comparison isn't confounded by different data
+representations or loss functions — see the Results section for why it
+*is* still confounded by training regime (full-split single run vs.
+pretrain/fine-tune), and why that matters for interpreting the outcome.
 
 **Phase 3 — pretrain.** A compact self-attention encoder over 2s of past
 motion, fused with an MLP-encoded context vector (kinematics + 3-nearest-
@@ -142,29 +168,38 @@ difficulties):
 
 | Model | minADE (m) | minFDE (m) | Miss Rate @2m |
 |---|---|---|---|
-| Constant Velocity | **0.511** | **1.101** | **0.077** |
+| Constant Velocity | 0.511 | 1.101 | 0.077 |
+| Constant Acceleration | 1.093 | 2.699 | 0.231 |
 | XGBoost | 1.004 | 2.043 | 0.177 |
 | Transformer, pretrained (easy-only) | 0.758 | 1.375 | 0.105 |
 | Transformer, fine-tuned-v1 (hard) | 0.925 | 1.776 | 0.082 |
 | Transformer, fine-tuned-v2 (post-HITL) | 0.905 | 1.776 | 0.076 |
+| **LSTM (baseline)** | **0.265** | **0.521** | **0.051** |
 
 Full table with val-split rows and easy/hard breakdowns:
 [`results/metrics_comparison.md`](results/metrics_comparison.md).
 
-**The honest headline: constant velocity wins in aggregate, and that's a
-real finding, not a bug** — but it comes with an important nuance that
-changes the story. Given the dataset's overwhelming skew toward
-stationary vehicles (above), a physics-based "assume no acceleration"
-model is very hard to beat on aggregate metrics dominated by that
-majority class:
+**The honest headline has changed since the LSTM was added: it's now the
+best model on every metric, by a wide margin** — and that result comes
+with an important caveat about what's actually being compared (see
+below). Before that:
 
-- **XGBoost is the weakest model.** Two contributing causes, both found
-  and fixed/documented during the project: (1) an early version leaked a
-  non-rotation-invariant absolute-heading feature that let the tree model
-  overfit to specific scenes' road orientations — removing it cut minADE
-  from 1.656 to 1.004 — and (2) tree regressors still can't extrapolate
-  past the range of displacements seen in training, so they systematically
-  underestimate faster-moving agents.
+- **Constant acceleration substantially underperforms constant velocity**
+  (minADE 1.093 vs 0.511), despite being the more sophisticated physics
+  model. Acceleration estimated from a double finite-difference of noisy
+  position data is itself noisy, and the `t^2` term in constant-
+  acceleration kinematics amplifies that noise over the 6s horizon — a
+  small spurious acceleration estimate produces a >100m overshoot by t=6s
+  for an otherwise near-stationary vehicle. A textbook fragility of naive
+  higher-order kinematic extrapolation, not a bug (verified on specific
+  examples — see `models/baseline_ca.py`).
+- **XGBoost is the weakest learned model.** Two contributing causes, both
+  found and fixed/documented during the project: (1) an early version
+  leaked a non-rotation-invariant absolute-heading feature that let the
+  tree model overfit to specific scenes' road orientations — removing it
+  cut minADE from 1.656 to 1.004 — and (2) tree regressors still can't
+  extrapolate past the range of displacements seen in training, so they
+  systematically underestimate faster-moving agents.
 - **The transformer beats XGBoost** even before fine-tuning, and gets
   within reach of constant velocity.
 - **Fine-tuning round 1 (hard scenes) made test performance *worse***
@@ -178,30 +213,56 @@ majority class:
   labels (~1%). A small effect size from a small number of corrections is
   the expected, honest outcome here — not a shortcoming of the approach.
 
-### The moving-vehicle subset flips the story
+**About that LSTM result — an important confound, not a clean "LSTM beats
+Transformer" claim.** The LSTM is trained differently from the
+transformer: one training run on the *full* train split (easy + hard
+combined), vs. the transformer's pretrain-on-easy → fine-tune-on-hard →
+fine-tune-again-on-HITL-corrections lineage. Two things changed at once
+— architecture *and* training regime — and this project hasn't run the
+controlled experiment that would isolate which one actually drives the
+gap (training the transformer on the full split in one pass, or putting
+the LSTM through the same pretrain/fine-tune pipeline). My honest guess is
+training regime matters more than architecture here: fragmenting an
+already-small dataset (2,388 train rows) into a 1,150-row pretrain stage
+and two separate ~1,238-row fine-tune stages gives each stage much less
+data than one pass over everything, and Phase 4 already showed fine-
+tuning on a small slice can hurt more than help. That's a real, useful
+finding about *pipeline design* on small data — but it's not yet
+evidence that LSTMs are simply better than attention for this task, and
+I'd want the controlled version before claiming that. Flagged here
+instead of quietly presenting the LSTM as an unqualified win.
+
+### The moving-vehicle subset
 
 Constant velocity's aggregate win is almost entirely an artifact of the
 dataset's dominant near-stationary majority (median displacement 0.16m —
 see above). Restricted to the 63/1,626 test examples where the vehicle
 actually moves more than 5m over the 6s horizon — the population that
-actually matters for planning — **fine-tuned-v2 beats constant velocity**:
+actually matters for planning — several learned models beat constant
+velocity, and the LSTM's lead widens further:
 
 | Model | minADE (m), moving vehicles only | minFDE (m) | Miss Rate @2m |
 |---|---|---|---|
 | Constant Velocity | 6.604 | 15.591 | 0.952 |
-| Transformer, fine-tuned-v2 | **5.434** | **12.870** | **0.873** |
+| Constant Acceleration | 6.853 | 16.744 | 0.937 |
+| XGBoost | 5.390 | 13.174 | 0.984 |
+| Transformer, pretrained | 5.791 | 13.383 | 0.921 |
+| Transformer, fine-tuned-v1 | 5.493 | 12.898 | 0.889 |
+| Transformer, fine-tuned-v2 | 5.434 | 12.870 | 0.873 |
+| **LSTM (baseline)** | **2.738** | **6.391** | 0.921 |
 
-This holds up whether you look at easy or hard moving vehicles
-separately (fine-tuned-v2 wins both), and whether you look at the mean
-(5.43m vs 6.60m) or a straight win-count (fine-tuned-v2 has lower
-per-example error in 38 of 63 cases, 60%). The takeaway: the aggregate
-metric is honest but easy to over-read — "constant velocity wins" really
-means "constant velocity wins on parked cars," and the learned model is
-the better predictor once a vehicle is actually doing something
-interesting. Logged as its own rows in
+Ranked by minADE, the LSTM's lead over the second-best model (XGBoost,
+5.390) is larger on this subset than in aggregate — it isn't just winning
+by being confidently correct on parked cars. More generally: every
+learned model except constant acceleration beats constant velocity here.
+The takeaway is the same as before, just sharper — the aggregate metric
+is honest but easy to over-read; "constant velocity wins" really means
+"constant velocity wins on parked cars," and several learned models are
+better predictors once a vehicle is actually doing something interesting.
+Logged as its own rows in
 [`results/metrics_comparison.md`](results/metrics_comparison.md)
 (phase 7, difficulty=`moving (>5m displacement)`), generated by
-`viz/scene_overlay.py`.
+`evaluation/moving_subset_analysis.py` for every registered model.
 
 ### Figures
 
@@ -231,6 +292,14 @@ vehicles the two models are much closer than the aggregate table
 suggests, with fine-tuned-v2 slightly ahead on average.
 
 ![Hard scene, typical](results/figures/hard_typical.png)
+
+**Typical moving vehicle, with the LSTM added** — a *median*, not
+cherry-picked, moving-vehicle example (see caveat above about training-
+regime confound). Constant velocity and fine-tuned-v2 both roughly
+extrapolate a straight line, overshooting the vehicle's actual turn;
+the LSTM tracks the curve closely (ADE 2.06m vs 9.33m and 8.26m).
+
+![Typical moving vehicle with LSTM](results/figures/lstm_typical.png)
 
 ## Human-in-the-loop review, in practice
 
@@ -262,6 +331,12 @@ itself doesn't mean the data is broken.
 - **Fine-tuning on 6 scenes is overfitting-prone**, as shown by round 1's
   test regression. More scenes, stronger regularization, or early stopping
   keyed to a larger/more representative validation set would help.
+- **The LSTM-vs-transformer comparison isn't controlled for training
+  regime** (see Results) — the next concrete experiment would be training
+  the transformer on the full split in one pass (matching the LSTM) and/or
+  running the LSTM through the same pretrain/fine-tune/HITL pipeline, to
+  find out whether the LSTM's advantage is really about architecture or
+  about not fragmenting an already-small dataset across pipeline stages.
 - **The transformer only sees 3 nearest neighbors and no map-vector
   encoding** (map context is used for the easy/hard split and the HITL
   viewer, not as a model input). A production model would encode the full
@@ -286,10 +361,13 @@ acceptance criteria driving this project.
 
 ```
 data/            download + preprocessing, schema doc
-models/          baselines, transformer architecture, pretrain/fine-tune scripts
-evaluation/      metrics (minADE/minFDE/MissRate) + comparison-table logging
+models/          baselines (CV, CA, XGBoost), transformer + LSTM architectures,
+                 pretrain/fine-tune scripts
+evaluation/      metrics (minADE/minFDE/MissRate), comparison-table logging,
+                 moving-vehicle-subset analysis
 hitl/            uncertainty flagging + Streamlit review app
-viz/             scene overlay figure generation
+viz/             model registry (shared prediction interface for all 7 models),
+                 scene overlay figure generation, interactive results dashboard
 results/         metrics_comparison.md + figures/
 corrections/     HITL reviewer output (gitignored — personal review data)
 ```

@@ -43,7 +43,9 @@ import torch
 from torch.utils.data import DataLoader
 
 from data.preprocess import FUTURE_STEPS
+from models.baseline_ca import predict_ca
 from models.baseline_cv import predict_cv
+from models.lstm import LSTMTrajectoryModel
 from models.transformer import TrajectoryDataset, TrajectoryTransformer
 
 CHECKPOINTS_DIR = Path(__file__).resolve().parent.parent / "models" / "checkpoints"
@@ -69,6 +71,15 @@ def load_cv_predict_fn() -> PredictFn:
     return predict
 
 
+def load_ca_predict_fn() -> PredictFn:
+    def predict(df: pd.DataFrame):
+        traj = predict_ca(df)[:, None, :, :]  # [N, 1, T, 2]
+        probs = np.ones((len(df), 1))
+        return traj, probs
+
+    return predict
+
+
 def load_xgb_predict_fn() -> PredictFn:
     model = joblib.load(XGB_MODEL_PATH)
 
@@ -81,8 +92,12 @@ def load_xgb_predict_fn() -> PredictFn:
     return predict
 
 
-def load_transformer_predict_fn(checkpoint_name: str) -> PredictFn:
-    model = TrajectoryTransformer()
+def load_multimodal_predict_fn(model_class, checkpoint_name: str) -> PredictFn:
+    """Works for any model sharing TrajectoryTransformer's forward signature
+    -- (past_seq, context) -> (traj [B,K,T,2], logits [B,K]) -- which
+    includes both TrajectoryTransformer and LSTMTrajectoryModel.
+    """
+    model = model_class()
     model.load_state_dict(torch.load(CHECKPOINTS_DIR / checkpoint_name))
     model.eval()
 
@@ -103,8 +118,15 @@ def load_transformer_predict_fn(checkpoint_name: str) -> PredictFn:
 
 MODEL_SPECS: list[ModelSpec] = [
     ModelSpec("cv", "Constant Velocity", "crimson", "dash", load_cv_predict_fn),
+    ModelSpec("ca", "Constant Acceleration", "purple", "dot", load_ca_predict_fn),
     ModelSpec("xgb", "XGBoost", "darkorange", "dot", load_xgb_predict_fn),
-    ModelSpec("pretrained", "Transformer (pretrained)", "gray", "dashdot", lambda: load_transformer_predict_fn("pretrained.pt")),
-    ModelSpec("finetuned_v1", "Transformer (fine-tuned-v1)", "steelblue", "dash", lambda: load_transformer_predict_fn("finetuned_v1.pt")),
-    ModelSpec("finetuned_v2", "Transformer (fine-tuned-v2)", "seagreen", "solid", lambda: load_transformer_predict_fn("finetuned_v2.pt")),
+    # NOTE: these three labels must exactly match the ones models/train_pretrain.py,
+    # models/finetune.py, and models/finetune_round2.py already log to
+    # results/metrics_comparison.md (phases 3/4/6) -- a mismatch means the
+    # same model shows up as two separate rows/bars/legend entries anywhere
+    # that groups by Model (the dashboard's Metrics tab in particular).
+    ModelSpec("pretrained", "Transformer (pretrained, easy-only)", "gray", "dashdot", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "pretrained.pt")),
+    ModelSpec("finetuned_v1", "Transformer (fine-tuned-v1, hard)", "steelblue", "dash", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "finetuned_v1.pt")),
+    ModelSpec("finetuned_v2", "Transformer (fine-tuned-v2, post-HITL)", "seagreen", "solid", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "finetuned_v2.pt")),
+    ModelSpec("lstm", "LSTM (baseline)", "brown", "solid", lambda: load_multimodal_predict_fn(LSTMTrajectoryModel, "lstm.pt")),
 ]
