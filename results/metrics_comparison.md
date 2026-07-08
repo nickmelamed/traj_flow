@@ -6,9 +6,6 @@ See `data/SCHEMA.md` for column definitions and `CLAUDE.md` for the phase plan.
 
 | Phase | Model | Eval Split | Difficulty | N | minADE (m) | minFDE (m) | Miss Rate @2m | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 2 | Constant Velocity | test | all | 1626 | 0.5109 | 1.1012 | 0.0769 |  |
-| 2 | Constant Velocity | test | easy | 747 | 0.4231 | 0.9312 | 0.0535 |  |
-| 2 | Constant Velocity | test | hard | 879 | 0.5855 | 1.2457 | 0.0967 |  |
 | 2 | XGBoost | test | all | 1626 | 1.0038 | 2.0428 | 0.1771 | still underperforms CV, but the gap narrowed substantially (was minADE 1.656 on test/all) after removing a leaked absolute-heading feature that doesn't generalize across scenes; remaining gap likely still trees underestimating displacement for higher-speed agents; see README limitations |
 | 2 | XGBoost | test | easy | 747 | 1.1245 | 2.2400 | 0.1968 | still underperforms CV, but the gap narrowed substantially (was minADE 1.656 on test/all) after removing a leaked absolute-heading feature that doesn't generalize across scenes; remaining gap likely still trees underestimating displacement for higher-speed agents; see README limitations |
 | 2 | XGBoost | test | hard | 879 | 0.9013 | 1.8753 | 0.1604 | still underperforms CV, but the gap narrowed substantially (was minADE 1.656 on test/all) after removing a leaked absolute-heading feature that doesn't generalize across scenes; remaining gap likely still trees underestimating displacement for higher-speed agents; see README limitations |
@@ -20,9 +17,12 @@ See `data/SCHEMA.md` for column definitions and `CLAUDE.md` for the phase plan.
 | 4 | Transformer (fine-tuned-v1, hard) | test | all | 1626 | 0.9249 | 1.7757 | 0.0824 |  |
 | 4 | Transformer (fine-tuned-v1, hard) | test | easy | 747 | 0.9587 | 1.8533 | 0.0776 |  |
 | 4 | Transformer (fine-tuned-v1, hard) | test | hard | 879 | 0.8961 | 1.7097 | 0.0865 | primary Phase 4 comparison metric (pretrained vs fine-tuned) -- fine-tuning improved val minADE but regressed test/hard minADE (0.798 -> 0.896) while improving Miss Rate@2m (0.112 -> 0.086, i.e. fewer complete misses but higher average error); with only 6 train scenes total this reads as scene-specific overfitting rather than a clean win; see README limitations |
-| 6 | Transformer (fine-tuned-v2, post-HITL) | val | all | 701 | 2.0459 | 4.6390 | 0.4123 | model selection metric (best checkpoint by val minADE, starting from Phase 4 fine-tuned-v1 weights) |
-| 6 | Transformer (fine-tuned-v2, post-HITL) | test | all | 1626 | 0.9050 | 1.7759 | 0.0756 |  |
-| 6 | Transformer (fine-tuned-v2, post-HITL) | test | easy | 747 | 0.9165 | 1.7847 | 0.0643 |  |
-| 6 | Transformer (fine-tuned-v2, post-HITL) | test | hard | 879 | 0.8952 | 1.7683 | 0.0853 | primary Phase 6 comparison metric (fine-tuned-v1 vs fine-tuned-v2, post-HITL) -- only 13 of 1238 hard-train labels actually changed from the review pass, so a small effect size here is expected, not a shortcoming; see README limitations |
 | 7 | Constant Velocity | test | moving (>5m displacement) | 63 | 6.6035 | 15.5911 | 0.9524 | restricted to the 63/1626 test examples with >5m net displacement over 6s -- see README, CV's aggregate win is driven by the dominant near-stationary majority, not by out-predicting the learned model on vehicles that actually move |
 | 7 | Transformer (fine-tuned-v2, post-HITL) | test | moving (>5m displacement) | 63 | 5.4342 | 12.8701 | 0.8730 | beats CV on this subset (see the Constant Velocity row above for the same subset) despite losing in aggregate across all test examples -- see README |
+| 2 | Constant Velocity | test | all | 1626 | 0.5109 | 1.1012 | 0.0769 | this aggregate win is driven almost entirely by the dataset's dominant near-stationary majority (median displacement 0.16m); restricted to the 63/1626 test examples that actually move >5m, fine-tuned-v2 wins instead -- see the 'moving (>5m displacement)' rows below and README 'moving-vehicle subset' section |
+| 2 | Constant Velocity | test | easy | 747 | 0.4231 | 0.9312 | 0.0535 |  |
+| 2 | Constant Velocity | test | hard | 879 | 0.5855 | 1.2457 | 0.0967 |  |
+| 6 | Transformer (fine-tuned-v2, post-HITL) | val | all | 701 | 2.0459 | 4.6390 | 0.4123 | model selection metric (best checkpoint by val minADE, starting from Phase 4 fine-tuned-v1 weights) |
+| 6 | Transformer (fine-tuned-v2, post-HITL) | test | all | 1626 | 0.9050 | 1.7759 | 0.0756 | loses to constant velocity here, but that's driven by the dataset's dominant near-stationary majority -- restricted to the 63/1626 test examples that actually move >5m, this model wins instead; see the 'moving (>5m displacement)' rows below and README 'moving-vehicle subset' section |
+| 6 | Transformer (fine-tuned-v2, post-HITL) | test | easy | 747 | 0.9165 | 1.7847 | 0.0643 |  |
+| 6 | Transformer (fine-tuned-v2, post-HITL) | test | hard | 879 | 0.8952 | 1.7683 | 0.0853 | primary Phase 6 comparison metric (fine-tuned-v1 vs fine-tuned-v2, post-HITL) -- only 13 of 1238 hard-train labels actually changed from the review pass, so a small effect size here is expected, not a shortcoming; see README limitations |

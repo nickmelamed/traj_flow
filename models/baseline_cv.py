@@ -41,7 +41,15 @@ def main() -> None:
         preds = predict_cv(df)
         gts = future_xy(df)
         metrics = batch_metrics(preds, gts)
-        log_metrics(phase=2, model="Constant Velocity", eval_split="test", difficulty=difficulty, metrics=metrics)
+        notes = (
+            "this aggregate win is driven almost entirely by the dataset's dominant near-stationary "
+            "majority (median displacement 0.16m); restricted to the 63/1626 test examples that actually "
+            "move >5m, fine-tuned-v2 wins instead -- see the 'moving (>5m displacement)' rows below and "
+            "README 'moving-vehicle subset' section"
+            if difficulty == "all"
+            else ""
+        )
+        log_metrics(phase=2, model="Constant Velocity", eval_split="test", difficulty=difficulty, metrics=metrics, notes=notes)
         print(f"[CV] test/{difficulty}: {metrics}")
 
 

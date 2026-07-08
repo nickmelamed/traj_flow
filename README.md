@@ -49,11 +49,26 @@ python hitl/flag_uncertain.py            # flag top ~10% most uncertain hard-tra
 streamlit run hitl/review_app.py         # human review + correction (interactive)
 python models/finetune_round2.py         # fine-tune round 2 on HITL-corrected data -> fine-tuned-v2
 python viz/scene_overlay.py              # generate the figures below
+streamlit run viz/dashboard.py           # interactive results dashboard (see below)
 ```
 
 Every script appends to [`results/metrics_comparison.md`](results/metrics_comparison.md)
 as it runs, so that file is the single source of truth for every metric in
 this README.
+
+### Results dashboard
+
+`streamlit run viz/dashboard.py` — a read-only companion to the HITL
+review app (no correction controls, just exploration):
+
+- **Metrics tab**: filter `results/metrics_comparison.md` by eval split /
+  difficulty, a bar chart per metric, and the full sortable table with
+  each row's methodology notes.
+- **Scene Browser tab**: pick any test example (with an easy/hard filter
+  and a "moving vehicles only" filter — see below) and see history,
+  ground truth, and *every* model's prediction (constant velocity,
+  XGBoost, and all three transformer checkpoints) overlaid on the map,
+  with a per-example error table underneath.
 
 ## Data
 

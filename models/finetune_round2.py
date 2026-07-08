@@ -129,13 +129,20 @@ def main() -> None:
     for difficulty in ["all", "easy", "hard"]:
         df = filter_difficulty(load_split("test"), difficulty)
         metrics = evaluate_on_df(model, df)
-        notes = (
-            f"primary Phase 6 comparison metric (fine-tuned-v1 vs fine-tuned-v2, post-HITL) -- "
-            f"only {n_changed} of {len(train_df)} hard-train labels actually changed from the review pass, "
-            f"so a small effect size here is expected, not a shortcoming; see README limitations"
-            if difficulty == "hard"
-            else ""
-        )
+        if difficulty == "hard":
+            notes = (
+                f"primary Phase 6 comparison metric (fine-tuned-v1 vs fine-tuned-v2, post-HITL) -- "
+                f"only {n_changed} of {len(train_df)} hard-train labels actually changed from the review pass, "
+                f"so a small effect size here is expected, not a shortcoming; see README limitations"
+            )
+        elif difficulty == "all":
+            notes = (
+                "loses to constant velocity here, but that's driven by the dataset's dominant near-stationary "
+                "majority -- restricted to the 63/1626 test examples that actually move >5m, this model wins "
+                "instead; see the 'moving (>5m displacement)' rows below and README 'moving-vehicle subset' section"
+            )
+        else:
+            notes = ""
         log_metrics(
             phase=6,
             model="Transformer (fine-tuned-v2, post-HITL)",
