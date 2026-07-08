@@ -31,6 +31,9 @@ if [ "$resume_after_hitl" = false ]; then
   run trajflow-finetune
   run trajflow-train-lstm
   run trajflow-train-transformer-full
+  run trajflow-train-transformer-ar-full  # ablation: attention encoder + autoregressive decoder, isolates decoder style
+  run trajflow-lstm-pretrain              # LSTM through the same pretrain/fine-tune/HITL lineage as the transformer
+  run trajflow-lstm-finetune
   run trajflow-flag-uncertain
 
   cat <<'EOF'
@@ -49,6 +52,7 @@ fi
 
 run trajflow-finetune-round2
 run trajflow-finetune-round2 --ablation-no-corrections  # control: isolates the corrections' effect from "just more epochs"
+run trajflow-lstm-finetune-round2                       # same corrections, LSTM lineage -- see README Results
 run trajflow-moving-subset-analysis                     # now also logs bootstrap CIs per model, see README
 run trajflow-scene-overlay
 
@@ -56,5 +60,6 @@ echo
 echo "=== Done. See results/metrics_comparison.md and results/figures/. ==="
 echo "For an interactive view: trajflow-dashboard"
 echo
-echo "Optional, not run above (slow, ~5 min, doesn't touch any canonical checkpoint):"
-echo "    trajflow-seed-variance   # re-trains the lineage across 3 seeds, logs mean +/- std"
+echo "Optional, not run above (slow, doesn't touch any canonical checkpoint):"
+echo "    trajflow-seed-variance                   # ~10 min: re-trains every lineage across 3 seeds, logs mean +/- std"
+echo "    trajflow-finetune-regularization-sweep    # ~1 min: weight-decay/dropout sweep on fine-tune round 1"

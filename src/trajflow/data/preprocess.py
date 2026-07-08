@@ -1,4 +1,4 @@
-"""Extract trajectory-prediction examples from nuScenes mini.
+"""Extract trajectory-prediction examples from nuScenes (mini by default).
 
 For every (vehicle instance, sample) pair with a full 6s future, this:
   * pulls 2s of past + 6s of future agent-frame xy history via PredictHelper
@@ -9,11 +9,17 @@ For every (vehicle instance, sample) pair with a full 6s future, this:
   * assigns it to a train/val/test split at the SCENE level, so no scene's
     samples appear in more than one split (avoids leakage)
 
-Splits: nuScenes mini only defines mini_train (8 scenes) / mini_val
-(2 scenes). We hold mini_val out untouched as our TEST set (matches the
-official split exactly, never trained on). We further carve the last
-`--val-scenes` scenes of mini_train into our VAL set for model selection,
-keeping the rest as TRAIN. All carving is scene-level.
+Splits: for v1.0-mini, nuScenes defines mini_train (8 scenes) / mini_val
+(2 scenes); we hold mini_val out untouched as our TEST set (matches the
+official split exactly, never trained on) and carve the last `--val-
+scenes-from-train` scenes of mini_train into our VAL set, keeping the rest
+as TRAIN. For any other `--version` (e.g. v1.0-trainval, see
+data/download.py's module docstring for what that needs), the same
+scene-level carving happens over the official `train` (700 scenes) /
+`val` (150 scenes) lists instead -- `--val-scenes-from-train`'s default
+(2) is tuned for mini's 8-scene train split and should be raised
+substantially at trainval scale (e.g. --val-scenes-from-train 50) so VAL
+isn't a vanishingly small fraction of TRAIN. All carving is scene-level.
 
 Output: data/processed/{train,val,test}.parquet — schema documented in
 data/SCHEMA.md.
@@ -32,7 +38,7 @@ from nuscenes.eval.common.utils import angle_diff, quaternion_yaw
 from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
-from nuscenes.utils.splits import mini_train, mini_val
+from nuscenes.utils import splits as nuscenes_splits
 
 from trajflow.paths import NUSCENES_ROOT as DEFAULT_DATAROOT
 from trajflow.paths import PROCESSED_DIR as DEFAULT_OUT
@@ -58,9 +64,22 @@ VEHICLE_PREFIX = "vehicle."
 N_VAL_SCENES_FROM_TRAIN = 2
 
 
-def build_scene_splits(val_scenes_from_train: int) -> dict:
-    train_scene_names = sorted(mini_train)
-    test_scene_names = sorted(mini_val)
+def build_scene_splits(val_scenes_from_train: int, version: str = "v1.0-mini") -> dict:
+    """version selects which official nuScenes split lists to carve TRAIN/VAL
+    out of and hold TEST from: mini_train/mini_val for v1.0-mini, or the
+    full train/val (700/150 scenes) for anything else -- see module
+    docstring. Either way, TEST is always the official *_val list held out
+    untouched, and VAL is carved from the tail of the official *_train
+    list, so this is the exact same scene-level-no-leakage design at
+    either scale.
+    """
+    official_train, official_test = (
+        (nuscenes_splits.mini_train, nuscenes_splits.mini_val)
+        if version == "v1.0-mini"
+        else (nuscenes_splits.train, nuscenes_splits.val)
+    )
+    train_scene_names = sorted(official_train)
+    test_scene_names = sorted(official_test)
     val_scene_names = train_scene_names[-val_scenes_from_train:]
     train_scene_names = train_scene_names[:-val_scenes_from_train]
 
@@ -200,9 +219,12 @@ def extract_examples(
     return rows, stats
 
 
-def write_schema_doc(path: Path) -> None:
+def write_schema_doc(path: Path, version: str = "v1.0-mini", val_scenes_from_train: int = N_VAL_SCENES_FROM_TRAIN) -> None:
+    train_list_name, test_list_name = ("mini_train", "mini_val") if version == "v1.0-mini" else ("train", "val")
     path.write_text(
         f"""# `data/processed/{{train,val,test}}.parquet` schema
+
+Generated from nuScenes version `{version}`.
 
 One row = one (vehicle instance, sample) trajectory-prediction example.
 
@@ -227,9 +249,9 @@ otherwise **easy**.
 
 ## Splits
 
-- `test` = official nuScenes `mini_val` scenes (2 scenes), held out untouched.
-- `val` = last {N_VAL_SCENES_FROM_TRAIN} scenes (alphabetically) of official `mini_train`, carved out for model selection.
-- `train` = remaining `mini_train` scenes.
+- `test` = official nuScenes `{test_list_name}` scenes, held out untouched.
+- `val` = last {val_scenes_from_train} scenes (alphabetically) of official `{train_list_name}`, carved out for model selection.
+- `train` = remaining `{train_list_name}` scenes.
 
 All assignment is by scene name, so no scene contributes samples to more than one split.
 """
@@ -252,14 +274,14 @@ def main() -> int:
         return 1
 
     helper = PredictHelper(nusc)
-    split_of_scene = build_scene_splits(args.val_scenes_from_train)
+    split_of_scene = build_scene_splits(args.val_scenes_from_train, args.version)
     scene_of_sample = build_scene_lookup(nusc)
 
     rows, stats = extract_examples(nusc, helper, split_of_scene, scene_of_sample)
     df = pd.DataFrame(rows)
 
     args.out.mkdir(parents=True, exist_ok=True)
-    write_schema_doc(SCHEMA_PATH)
+    write_schema_doc(SCHEMA_PATH, args.version, args.val_scenes_from_train)
 
     print("\n=== Preprocessing summary ===")
     print(f"Candidate vehicle instance-samples: {stats['candidates']}")

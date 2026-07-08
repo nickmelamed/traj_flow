@@ -41,23 +41,30 @@ from torch.utils.data import DataLoader
 
 from trajflow.evaluation.evaluate import filter_difficulty, load_split, log_metrics
 from trajflow.models import train_lstm as train_lstm_mod
+from trajflow.models import train_lstm_pretrain as train_lstm_pretrain_mod
 from trajflow.models import train_pretrain as train_pretrain_mod
 from trajflow.models import train_transformer_full as train_transformer_full_mod
 from trajflow.models.finetune import EPOCHS as FINETUNE_EPOCHS
 from trajflow.models.finetune import LR as FINETUNE_LR
+from trajflow.models.finetune_lstm import EPOCHS as FINETUNE_LSTM_EPOCHS
+from trajflow.models.finetune_lstm import LR as FINETUNE_LSTM_LR
+from trajflow.models.finetune_lstm_round2 import EPOCHS as ROUND2_LSTM_EPOCHS
+from trajflow.models.finetune_lstm_round2 import LR as ROUND2_LSTM_LR
 from trajflow.models.finetune_round2 import EPOCHS as ROUND2_EPOCHS
 from trajflow.models.finetune_round2 import LR as ROUND2_LR
 from trajflow.models.finetune_round2 import merge_corrections
 from trajflow.models.lstm import LSTMTrajectoryModel
+from trajflow.models import train_transformer_ar_full as train_transformer_ar_full_mod
 from trajflow.models.train_pretrain import evaluate_on_df, set_seed
 from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.models.transformer_ar import TransformerARModel
 from trajflow.paths import CORRECTIONS_PATH
 
 SEEDS = [0, 1, 2]
 BATCH_SIZE = 64  # identical across every canonical script
 
 
-def train_loop(model, train_df: pd.DataFrame, val_df: pd.DataFrame, epochs: int, lr: float, warm_start: bool) -> tuple:
+def train_loop(model, train_df: pd.DataFrame, val_df: pd.DataFrame, epochs: int, lr: float, warm_start: bool, weight_decay: float = 0.0) -> tuple:
     """The exact training loop shared (copy-identical) by pretrain / finetune
     / finetune_round2 / train_lstm / train_transformer_full -- extracted
     here once rather than re-run through 5 separate subprocesses, since
@@ -83,10 +90,14 @@ def train_loop(model, train_df: pd.DataFrame, val_df: pd.DataFrame, epochs: int,
         at all if no epoch happened to beat that -- producing identical
         pretrained/fine-tuned-v1/fine-tuned-v2 numbers for 2 of 3 seeds
         before this was caught and fixed.
+
+    weight_decay defaults to 0.0, matching every canonical script exactly
+    (none of them regularize). Non-zero values are used by
+    finetune_regularization_sweep.py only.
     """
     train_dataset = TrajectoryDataset(train_df)
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
     if warm_start:
         best_val_minade = evaluate_on_df(model, val_df)["minADE"]
@@ -150,6 +161,22 @@ def run_one_seed(seed: int, corrections_df: pd.DataFrame) -> dict:
     set_seed(seed)
     transformer_full, _ = train_loop(TrajectoryTransformer(), train_full, val_df, train_transformer_full_mod.EPOCHS, train_transformer_full_mod.LR, warm_start=False)
     results["Transformer (full-split)"] = eval_all_hard(transformer_full)
+
+    set_seed(seed)
+    transformer_ar_full, _ = train_loop(TransformerARModel(), train_full, val_df, train_transformer_ar_full_mod.EPOCHS, train_transformer_ar_full_mod.LR, warm_start=False)
+    results["Transformer-AR (full-split, autoregressive decoder)"] = eval_all_hard(transformer_ar_full)
+
+    set_seed(seed)
+    lstm_pretrained, _ = train_loop(LSTMTrajectoryModel(), train_easy, val_df, train_lstm_pretrain_mod.EPOCHS, train_lstm_pretrain_mod.LR, warm_start=False)
+    results["LSTM (pretrained, easy-only)"] = eval_all_hard(lstm_pretrained)
+
+    set_seed(seed)
+    lstm_finetuned_v1, _ = train_loop(lstm_pretrained, train_hard, val_df, FINETUNE_LSTM_EPOCHS, FINETUNE_LSTM_LR, warm_start=True)
+    results["LSTM (fine-tuned-v1, hard)"] = eval_all_hard(lstm_finetuned_v1)
+
+    set_seed(seed)
+    lstm_finetuned_v2, _ = train_loop(lstm_finetuned_v1, train_hard_corrected, val_df, ROUND2_LSTM_EPOCHS, ROUND2_LSTM_LR, warm_start=True)
+    results["LSTM (fine-tuned-v2, post-HITL)"] = eval_all_hard(lstm_finetuned_v2)
 
     return results
 

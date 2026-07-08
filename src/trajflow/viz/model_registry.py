@@ -43,6 +43,7 @@ from trajflow.models.baseline_ca import predict_ca
 from trajflow.models.baseline_cv import predict_cv
 from trajflow.models.lstm import LSTMTrajectoryModel
 from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer
+from trajflow.models.transformer_ar import TransformerARModel
 from trajflow.paths import CHECKPOINTS_DIR
 
 # df -> (traj [N, K, T, 2], probs [N, K])
@@ -128,5 +129,12 @@ MODEL_SPECS: list[ModelSpec] = [
     # --ablation-no-corrections and README HITL section.
     ModelSpec("finetuned_v2_control", "Transformer (fine-tuned-v2-control, no corrections)", "darkgoldenrod", "dot", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "finetuned_v2_control.pt")),
     ModelSpec("transformer_full", "Transformer (full-split)", "black", "dashdot", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "transformer_full.pt")),
+    ModelSpec("transformer_ar_full", "Transformer-AR (full-split, autoregressive decoder)", "teal", "dash", lambda: load_multimodal_predict_fn(TransformerARModel, "transformer_ar_full.pt")),
     ModelSpec("lstm", "LSTM (baseline)", "brown", "solid", lambda: load_multimodal_predict_fn(LSTMTrajectoryModel, "lstm.pt")),
+    # LSTM put through the same pretrain(easy)/fine-tune(hard)/fine-tune(HITL) lineage as the transformer --
+    # see models/train_lstm_pretrain.py, finetune_lstm.py, finetune_lstm_round2.py and README Results for
+    # whether it shows the same scene-specific-overfitting fragility.
+    ModelSpec("lstm_pretrained", "LSTM (pretrained, easy-only)", "sienna", "dashdot", lambda: load_multimodal_predict_fn(LSTMTrajectoryModel, "lstm_pretrained.pt")),
+    ModelSpec("lstm_finetuned_v1", "LSTM (fine-tuned-v1, hard)", "chocolate", "dash", lambda: load_multimodal_predict_fn(LSTMTrajectoryModel, "lstm_finetuned_v1.pt")),
+    ModelSpec("lstm_finetuned_v2", "LSTM (fine-tuned-v2, post-HITL)", "peru", "solid", lambda: load_multimodal_predict_fn(LSTMTrajectoryModel, "lstm_finetuned_v2.pt")),
 ]

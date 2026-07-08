@@ -112,7 +112,7 @@ def plot_example(row, model_lines: list, map_cache: dict, helper: PredictHelper,
         all_pred_x.append(pred[:, 0])
         all_pred_y.append(pred[:, 1])
 
-    ax.scatter([0], [0], color="black", marker="x", s=60, zorder=6)
+    ax.scatter([0], [0], color="magenta", marker="x", s=80, linewidths=3, zorder=6)
 
     # Clip the view to the trajectory content (with padding), not the map's
     # extent -- nearby_lane_polylines pulls in full lane geometry for any

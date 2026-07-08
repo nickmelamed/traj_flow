@@ -1,5 +1,7 @@
 # `data/processed/{train,val,test}.parquet` schema
 
+Generated from nuScenes version `v1.0-mini`.
+
 One row = one (vehicle instance, sample) trajectory-prediction example.
 
 | column | meaning |
@@ -23,7 +25,7 @@ otherwise **easy**.
 
 ## Splits
 
-- `test` = official nuScenes `mini_val` scenes (2 scenes), held out untouched.
+- `test` = official nuScenes `mini_val` scenes, held out untouched.
 - `val` = last 2 scenes (alphabetically) of official `mini_train`, carved out for model selection.
 - `train` = remaining `mini_train` scenes.
 

@@ -3,14 +3,19 @@
 Run with:
     trajflow-dashboard
 
-Two tabs:
+Three tabs:
   - Metrics: a sortable/filterable view of results/metrics_comparison.md
     plus grouped bar charts, so the whole project's results can be
     browsed without reading raw markdown.
   - Scene Browser: pick any test example and see history, ground truth,
-    and every model's prediction (constant velocity, XGBoost, and all
-    three transformer checkpoints) overlaid on the map, read-only (no
-    review/correction controls -- that's hitl/review_app.py's job).
+    and every registered model's prediction overlaid on the map,
+    read-only (no review/correction controls -- that's hitl/review_app.py's
+    job).
+  - Per-Scene: every model's error broken out by individual scene (all 10,
+    across train/val/test, not just the 2 in test) -- makes the project's
+    recurring "scene-to-scene variance dominates at this data size" finding
+    (see README Limitations / Seed variance) visible directly, rather than
+    only inferable from prose.
 """
 
 import os
@@ -29,6 +34,7 @@ from trajflow.viz.model_registry import MODEL_SPECS
 
 from trajflow.evaluation.evaluate import future_xy, load_split
 from trajflow.evaluation.metrics import batch_metrics
+from trajflow.evaluation.moving_subset_analysis import per_example_min_ade
 
 from nuscenes.map_expansion.arcline_path_utils import discretize_lane
 from nuscenes.map_expansion.map_api import NuScenesMap
@@ -84,6 +90,18 @@ def load_test_df() -> pd.DataFrame:
     gts = future_xy(df)
     df["displacement"] = np.linalg.norm(gts[:, -1, :], axis=-1)
     return df
+
+
+@st.cache_data
+def load_all_splits_df() -> pd.DataFrame:
+    """train+val+test concatenated, keeping each row's own `split` column
+    (already in the processed data) so per-scene stats can be colored by
+    which official split that scene belongs to. Used only by the
+    Per-Scene tab -- everywhere else deliberately keeps splits separate.
+    """
+    return pd.concat(
+        [load_split(s).reset_index(drop=True) for s in ["train", "val", "test"]], ignore_index=True
+    )
 
 
 @st.cache_data
@@ -226,7 +244,7 @@ def scene_browser_tab() -> None:
             line=dict(color=spec.color, width=2, dash=spec.dash), name=spec.label,
         ))
 
-    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers", marker=dict(color="black", size=14, symbol="x"), name="current position"))
+    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers", marker=dict(color="magenta", size=16, symbol="x", line=dict(width=3, color="magenta")), name="current position"))
 
     fig.update_layout(
         template="plotly_white",
@@ -244,15 +262,75 @@ def scene_browser_tab() -> None:
         st.dataframe(pd.DataFrame(per_model_metrics).T.round(3), width="stretch")
 
 
+def per_scene_tab() -> None:
+    st.header("Per-Scene Breakdown")
+    st.caption(
+        "Scene-to-scene variance is one of this project's recurring findings (see README Limitations / "
+        "'Seed variance') -- nuScenes mini has only 10 scenes total, and different scenes have very "
+        "different typical vehicle speeds. This breaks any model's error out by individual scene (colored "
+        "by which split -- train/val/test -- that scene belongs to), across ALL 10 scenes, rather than "
+        "just the aggregated single-split numbers in the Metrics tab or the 2 scenes visible in the Scene "
+        "Browser (which only shows test)."
+    )
+
+    all_df = load_all_splits_df()
+    gts_all = future_xy(all_df)
+
+    col1, col2 = st.columns(2)
+    model_labels = [s.label for s in MODEL_SPECS]
+    default_idx = model_labels.index("Constant Velocity") if "Constant Velocity" in model_labels else 0
+    model_label = col1.selectbox("Model", model_labels, index=default_idx, key="ps_model")
+    difficulty_filter = col2.selectbox("Difficulty", ["all", "easy", "hard"], key="ps_difficulty")
+
+    spec = next(s for s in MODEL_SPECS if s.label == model_label)
+    predict_fn = get_predict_fn(spec.key)
+    traj, _ = predict_fn(all_df)
+    per_example = per_example_min_ade(traj, gts_all)
+
+    plot_df = all_df[["scene_name", "split", "difficulty"]].copy()
+    plot_df["minADE"] = per_example
+    if difficulty_filter != "all":
+        plot_df = plot_df[plot_df["difficulty"] == difficulty_filter]
+
+    if len(plot_df) == 0:
+        st.warning("No examples match this filter.")
+        return
+
+    scene_stats = (
+        plot_df.groupby(["scene_name", "split"], as_index=False)
+        .agg(**{"mean minADE (m)": ("minADE", "mean"), "N examples": ("minADE", "size")})
+        .sort_values(["split", "scene_name"])
+    )
+
+    st.subheader(f"Per-scene mean minADE — {model_label} ({difficulty_filter})")
+    fig = px.bar(
+        scene_stats, x="scene_name", y="mean minADE (m)", color="split", text_auto=".2f",
+        template="plotly_white", category_orders={"split": ["train", "val", "test"]},
+    )
+    fig.update_layout(height=420, xaxis_title="scene")
+    st.plotly_chart(fig, theme=None, key="per_scene_bar")
+
+    lo, hi = scene_stats["mean minADE (m)"].min(), scene_stats["mean minADE (m)"].max()
+    st.caption(
+        f"Range across scenes: {lo:.3f}m to {hi:.3f}m ({hi / max(lo, 1e-6):.1f}x) -- this spread, not any "
+        "single number, is the point: aggregate metrics on a fixed split can look very different depending "
+        "on which 1-2 scenes happen to land there. See README 'Seed variance' for the same point from a "
+        "different angle (re-training noise, not just eval-split noise)."
+    )
+    st.dataframe(scene_stats.round(3), width="stretch", height=350)
+
+
 def main() -> None:
     st.set_page_config(page_title="TrajFlow Dashboard", layout="wide")
     st.title("TrajFlow — Results Dashboard")
 
-    tab_metrics, tab_scenes = st.tabs(["Metrics", "Scene Browser"])
+    tab_metrics, tab_scenes, tab_per_scene = st.tabs(["Metrics", "Scene Browser", "Per-Scene"])
     with tab_metrics:
         metrics_tab()
     with tab_scenes:
         scene_browser_tab()
+    with tab_per_scene:
+        per_scene_tab()
 
 
 if __name__ == "__main__":
