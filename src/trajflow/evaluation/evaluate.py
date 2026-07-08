@@ -64,12 +64,26 @@ def _row_key(line: str) -> tuple:
     return tuple(cells[:4])
 
 
+def _sanitize_cell(value: str) -> str:
+    """Neutralize characters that would corrupt the pipe-delimited markdown
+    table (a literal "|" would shift every later column; a newline would
+    split one row into two lines `_read_existing_rows` can't reassemble).
+    """
+    return str(value).replace("|", "/").replace("\n", " ").replace("\r", " ")
+
+
 def log_metrics(phase, model: str, eval_split: str, difficulty: str, metrics: dict, notes: str = "") -> None:
     """Append (or replace, if the same phase/model/split/difficulty combo
     was already logged in an earlier run) a row in results/metrics_comparison.md.
     """
     RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+    model, eval_split, difficulty, notes = (
+        _sanitize_cell(model),
+        _sanitize_cell(eval_split),
+        _sanitize_cell(difficulty),
+        _sanitize_cell(notes),
+    )
     new_line = (
         f"| {phase} | {model} | {eval_split} | {difficulty} | {metrics['N']} | "
         f"{metrics['minADE']:.4f} | {metrics['minFDE']:.4f} | {metrics['MissRate@2m']:.4f} | {notes} |\n"

@@ -123,9 +123,10 @@ def nearby_lane_polylines(map_name: str, x: float, y: float, translation: tuple,
 
 
 def spline_from_keypoints(key_points: list) -> np.ndarray:
-    """Fit a natural cubic spline from the origin (agent's current position,
-    t=0) through the 3 key points at KEY_TIMES seconds, then evaluate it at
-    the 12 canonical timesteps. Returns [FUTURE_STEPS, 2].
+    """Fit a cubic spline (scipy's default not-a-knot boundary condition)
+    from the origin (agent's current position, t=0) through the 3 key
+    points at KEY_TIMES seconds, then evaluate it at the 12 canonical
+    timesteps. Returns [FUTURE_STEPS, 2].
     """
     times = np.concatenate([[0.0], KEY_TIMES])
     xs = np.concatenate([[0.0], [p[0] for p in key_points]])

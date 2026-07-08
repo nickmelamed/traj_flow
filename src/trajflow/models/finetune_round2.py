@@ -12,8 +12,19 @@ Continues from models/checkpoints/finetuned_v1.pt (not the original
 pretrained checkpoint) -- this is round 2 of fine-tuning, not a restart.
 Re-evaluates on the same held-out test set as every other phase for a
 fair before/after comparison.
+
+Ablation control (--ablation-no-corrections): fine-tuned-v2 gets both (a)
+60 more epochs of fine-tuning and (b) 13 corrected labels, confounded --
+so an improvement over fine-tuned-v1 doesn't by itself prove the
+corrections mattered rather than just more training on largely the same
+hard-train data. This flag reruns the identical round-2 recipe (same
+epochs/LR/seed/starting checkpoint) on the UNCORRECTED hard-train split
+-- everything held constant except the 13 corrected labels -- producing
+`Transformer (fine-tuned-v2-control, no corrections)` so the two can be
+compared directly. See README HITL section.
 """
 
+import argparse
 import sys
 
 import numpy as np
@@ -28,6 +39,7 @@ from trajflow.paths import CHECKPOINTS_DIR, CORRECTIONS_PATH
 
 V1_CHECKPOINT = CHECKPOINTS_DIR / "finetuned_v1.pt"
 CHECKPOINT_PATH = CHECKPOINTS_DIR / "finetuned_v2.pt"
+CONTROL_CHECKPOINT_PATH = CHECKPOINTS_DIR / "finetuned_v2_control.pt"
 EPOCHS = 60
 LR = 2e-4
 BATCH_SIZE = 64
@@ -56,18 +68,32 @@ def merge_corrections(train_hard_df: pd.DataFrame, corrections_df: pd.DataFrame)
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--ablation-no-corrections",
+        action="store_true",
+        help="Skip merging HITL corrections and fine-tune round 2 on the unmodified hard-train split instead "
+        "-- an ablation isolating whether the corrections themselves help, vs. just more training epochs.",
+    )
+    args = parser.parse_args()
+    is_control = args.ablation_no_corrections
+
     set_seed(SEED)
 
     if not V1_CHECKPOINT.exists():
         print(f"ERROR: no round-1 checkpoint at {V1_CHECKPOINT}. Run trajflow-finetune first.", file=sys.stderr)
         raise SystemExit(1)
-    if not CORRECTIONS_PATH.exists():
-        print(f"ERROR: no corrections found at {CORRECTIONS_PATH}. Complete a review pass via trajflow-review-app first.", file=sys.stderr)
-        raise SystemExit(1)
 
     train_hard_df = filter_difficulty(load_split("train"), "hard").reset_index(drop=True)
-    corrections_df = pd.read_parquet(CORRECTIONS_PATH)
-    train_df, n_changed = merge_corrections(train_hard_df, corrections_df)
+    if is_control:
+        train_df, n_changed = train_hard_df, 0
+        print("[Ablation] --ablation-no-corrections: skipping corrections merge, training on unmodified hard-train split.")
+    else:
+        if not CORRECTIONS_PATH.exists():
+            print(f"ERROR: no corrections found at {CORRECTIONS_PATH}. Complete a review pass via trajflow-review-app first.", file=sys.stderr)
+            raise SystemExit(1)
+        corrections_df = pd.read_parquet(CORRECTIONS_PATH)
+        train_df, n_changed = merge_corrections(train_hard_df, corrections_df)
     val_df = load_split("val")
 
     train_dataset = TrajectoryDataset(train_df)
@@ -108,29 +134,52 @@ def main() -> None:
             )
 
     model.load_state_dict(best_state)
-    CHECKPOINT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(model.state_dict(), CHECKPOINT_PATH)
-    print(f"Saved best checkpoint (val minADE={best_val_minade:.4f}) to {CHECKPOINT_PATH}")
+    checkpoint_path = CONTROL_CHECKPOINT_PATH if is_control else CHECKPOINT_PATH
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(model.state_dict(), checkpoint_path)
+    print(f"Saved best checkpoint (val minADE={best_val_minade:.4f}) to {checkpoint_path}")
+
+    model_label = (
+        "Transformer (fine-tuned-v2-control, no corrections)" if is_control else "Transformer (fine-tuned-v2, post-HITL)"
+    )
 
     val_metrics = evaluate_on_df(model, val_df)
     log_metrics(
         phase=6,
-        model="Transformer (fine-tuned-v2, post-HITL)",
+        model=model_label,
         eval_split="val",
         difficulty="all",
         metrics=val_metrics,
-        notes="model selection metric (best checkpoint by val minADE, starting from Phase 4 fine-tuned-v1 weights)",
+        notes=(
+            "ablation control for the HITL comparison above: identical round-2 recipe (same starting "
+            "checkpoint, epochs, LR, seed) but WITHOUT merging the 13 corrected labels -- isolates whether "
+            "fine-tuned-v2's gain over fine-tuned-v1 comes from the corrections themselves or just from 60 "
+            "more epochs of fine-tuning on largely the same hard-train data; see README HITL section"
+            if is_control
+            else "model selection metric (best checkpoint by val minADE, starting from Phase 4 fine-tuned-v1 weights)"
+        ),
     )
-    print(f"[Fine-tuned-v2] val/all: {val_metrics}")
+    print(f"[{model_label}] val/all: {val_metrics}")
 
     for difficulty in ["all", "easy", "hard"]:
         df = filter_difficulty(load_split("test"), difficulty)
         metrics = evaluate_on_df(model, df)
-        if difficulty == "hard":
+        if is_control:
+            notes = (
+                "ablation control -- same round-2 training recipe as fine-tuned-v2 (60 epochs continuing from "
+                "fine-tuned-v1) but on the UNCORRECTED hard-train split; compare directly against "
+                "fine-tuned-v2's row above to see how much of that model's gain (if any) is attributable to the "
+                "13 corrected labels themselves rather than just more fine-tuning epochs; see README HITL section"
+                if difficulty == "hard"
+                else ""
+            )
+        elif difficulty == "hard":
             notes = (
                 f"primary Phase 6 comparison metric (fine-tuned-v1 vs fine-tuned-v2, post-HITL) -- "
                 f"only {n_changed} of {len(train_df)} hard-train labels actually changed from the review pass, "
-                f"so a small effect size here is expected, not a shortcoming; see README limitations"
+                f"so a small effect size here is expected, not a shortcoming; see README limitations. Compare "
+                f"against the 'fine-tuned-v2-control, no corrections' row (--ablation-no-corrections) to see "
+                f"how much of this is attributable to the corrections themselves vs. just more fine-tuning epochs"
             )
         elif difficulty == "all":
             notes = (
@@ -142,13 +191,13 @@ def main() -> None:
             notes = ""
         log_metrics(
             phase=6,
-            model="Transformer (fine-tuned-v2, post-HITL)",
+            model=model_label,
             eval_split="test",
             difficulty=difficulty,
             metrics=metrics,
             notes=notes,
         )
-        print(f"[Fine-tuned-v2] test/{difficulty}: {metrics}")
+        print(f"[{model_label}] test/{difficulty}: {metrics}")
 
 
 if __name__ == "__main__":

@@ -123,6 +123,10 @@ MODEL_SPECS: list[ModelSpec] = [
     ModelSpec("pretrained", "Transformer (pretrained, easy-only)", "gray", "dashdot", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "pretrained.pt")),
     ModelSpec("finetuned_v1", "Transformer (fine-tuned-v1, hard)", "steelblue", "dash", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "finetuned_v1.pt")),
     ModelSpec("finetuned_v2", "Transformer (fine-tuned-v2, post-HITL)", "seagreen", "solid", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "finetuned_v2.pt")),
+    # Ablation control for the HITL comparison: identical round-2 recipe as finetuned_v2 (same starting
+    # checkpoint/epochs/LR/seed) but WITHOUT merging the 13 corrected labels -- see models/finetune_round2.py
+    # --ablation-no-corrections and README HITL section.
+    ModelSpec("finetuned_v2_control", "Transformer (fine-tuned-v2-control, no corrections)", "darkgoldenrod", "dot", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "finetuned_v2_control.pt")),
     ModelSpec("transformer_full", "Transformer (full-split)", "black", "dashdot", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "transformer_full.pt")),
     ModelSpec("lstm", "LSTM (baseline)", "brown", "solid", lambda: load_multimodal_predict_fn(LSTMTrajectoryModel, "lstm.pt")),
 ]

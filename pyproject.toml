@@ -25,6 +25,9 @@ dependencies = [
     "tqdm==4.68.3",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest==8.4.2"]
+
 [project.scripts]
 trajflow-download = "trajflow.data.download:main"
 trajflow-preprocess = "trajflow.data.preprocess:main"
@@ -38,9 +41,13 @@ trajflow-train-lstm = "trajflow.models.train_lstm:main"
 trajflow-train-transformer-full = "trajflow.models.train_transformer_full:main"
 trajflow-flag-uncertain = "trajflow.hitl.flag_uncertain:main"
 trajflow-moving-subset-analysis = "trajflow.evaluation.moving_subset_analysis:main"
+trajflow-seed-variance = "trajflow.evaluation.seed_variance:main"
 trajflow-scene-overlay = "trajflow.viz.scene_overlay:main"
 trajflow-review-app = "trajflow.cli:run_review_app"
 trajflow-dashboard = "trajflow.cli:run_dashboard"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

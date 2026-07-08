@@ -48,9 +48,13 @@ EOF
 fi
 
 run trajflow-finetune-round2
-run trajflow-moving-subset-analysis
+run trajflow-finetune-round2 --ablation-no-corrections  # control: isolates the corrections' effect from "just more epochs"
+run trajflow-moving-subset-analysis                     # now also logs bootstrap CIs per model, see README
 run trajflow-scene-overlay
 
 echo
 echo "=== Done. See results/metrics_comparison.md and results/figures/. ==="
 echo "For an interactive view: trajflow-dashboard"
+echo
+echo "Optional, not run above (slow, ~5 min, doesn't touch any canonical checkpoint):"
+echo "    trajflow-seed-variance   # re-trains the lineage across 3 seeds, logs mean +/- std"

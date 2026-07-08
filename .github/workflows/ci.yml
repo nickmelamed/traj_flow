@@ -1,0 +1,29 @@
+name: CI
+
+# Runs the pure-function unit test suite (tests/) on every push/PR. This
+# does NOT run the full pipeline (preprocess/train/eval) -- that requires
+# nuScenes mini, which needs a manual account + license click-through (see
+# README "Setup") and isn't available to CI. Every test here uses small
+# synthetic in-memory data instead, specifically so correctness of the
+# math/logging/merge logic can be checked without the real dataset.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install trajflow + dev dependencies
+        run: pip install -e '.[dev]'
+
+      - name: Run tests
+        run: pytest tests/ -v
