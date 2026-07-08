@@ -64,7 +64,7 @@ VEHICLE_PREFIX = "vehicle."
 N_VAL_SCENES_FROM_TRAIN = 2
 
 
-def build_scene_splits(val_scenes_from_train: int, version: str = "v1.0-mini") -> dict:
+def build_scene_splits(val_scenes_from_train: int, version: str = "v1.0-mini", max_scenes: int | None = None) -> dict:
     """version selects which official nuScenes split lists to carve TRAIN/VAL
     out of and hold TEST from: mini_train/mini_val for v1.0-mini, or the
     full train/val (700/150 scenes) for anything else -- see module
@@ -72,6 +72,17 @@ def build_scene_splits(val_scenes_from_train: int, version: str = "v1.0-mini") -
     untouched, and VAL is carved from the tail of the official *_train
     list, so this is the exact same scene-level-no-leakage design at
     either scale.
+
+    max_scenes caps the TOTAL scene count (train+val+test) for fast pilot
+    runs at trainval scale -- e.g. `--max-scenes 100` before committing to
+    all 850. Truncation is deterministic (alphabetical, not random), so a
+    given max_scenes value always picks the same scenes -- reproducible,
+    not a random subsample. The official train:test scene-count ratio is
+    preserved when capping, so val_scenes_from_train still means roughly
+    the same thing relative to the (smaller) train pool. Scenes outside
+    the cap are simply never assigned a split, so extract_examples' cheap
+    `split_of_scene.get(scene_name) is None -> skip` check filters their
+    samples out before any expensive PredictHelper/map work runs on them.
     """
     official_train, official_test = (
         (nuscenes_splits.mini_train, nuscenes_splits.mini_val)
@@ -80,6 +91,14 @@ def build_scene_splits(val_scenes_from_train: int, version: str = "v1.0-mini") -
     )
     train_scene_names = sorted(official_train)
     test_scene_names = sorted(official_test)
+
+    if max_scenes is not None:
+        train_fraction = len(train_scene_names) / (len(train_scene_names) + len(test_scene_names))
+        max_train = max(val_scenes_from_train + 1, round(max_scenes * train_fraction))
+        max_test = max(1, max_scenes - max_train)
+        train_scene_names = train_scene_names[:max_train]
+        test_scene_names = test_scene_names[:max_test]
+
     val_scene_names = train_scene_names[-val_scenes_from_train:]
     train_scene_names = train_scene_names[:-val_scenes_from_train]
 
@@ -264,6 +283,12 @@ def main() -> int:
     parser.add_argument("--version", type=str, default="v1.0-mini")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--val-scenes-from-train", type=int, default=N_VAL_SCENES_FROM_TRAIN)
+    parser.add_argument(
+        "--max-scenes", type=int, default=None,
+        help="Cap total scenes (train+val+test) for a fast pilot run at trainval scale, e.g. 100 before "
+        "committing to all 850. Deterministic (alphabetical truncation), not a random subsample. "
+        "Omit for the full scene count (mini's default: all 10).",
+    )
     args = parser.parse_args()
 
     try:
@@ -274,7 +299,9 @@ def main() -> int:
         return 1
 
     helper = PredictHelper(nusc)
-    split_of_scene = build_scene_splits(args.val_scenes_from_train, args.version)
+    split_of_scene = build_scene_splits(args.val_scenes_from_train, args.version, args.max_scenes)
+    if args.max_scenes is not None:
+        print(f"Pilot run: capped to {len(split_of_scene)} scenes total (--max-scenes {args.max_scenes}).")
     scene_of_sample = build_scene_lookup(nusc)
 
     rows, stats = extract_examples(nusc, helper, split_of_scene, scene_of_sample)

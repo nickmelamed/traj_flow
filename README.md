@@ -737,6 +737,9 @@ itself doesn't mean the data is broken.
   needs an account/license click-through I can't automate; preprocessing
   wall-clock time should also scale roughly linearly with scene count, so
   expect noticeably longer than mini's few minutes at 850 scenes).
+  `preprocess.py --max-scenes N` caps the total scene count (deterministic,
+  not a random subsample) for a fast pilot run before committing to all
+  850 -- e.g. `--max-scenes 100 --val-scenes-from-train 10`.
 - **The dataset is dominated by near-stationary vehicles**, which is why
   constant velocity is such a strong baseline. A production system would
   want metrics stratified by (or a training/eval set rebalanced toward)
