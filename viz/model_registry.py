@@ -128,5 +128,6 @@ MODEL_SPECS: list[ModelSpec] = [
     ModelSpec("pretrained", "Transformer (pretrained, easy-only)", "gray", "dashdot", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "pretrained.pt")),
     ModelSpec("finetuned_v1", "Transformer (fine-tuned-v1, hard)", "steelblue", "dash", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "finetuned_v1.pt")),
     ModelSpec("finetuned_v2", "Transformer (fine-tuned-v2, post-HITL)", "seagreen", "solid", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "finetuned_v2.pt")),
+    ModelSpec("transformer_full", "Transformer (full-split)", "black", "dashdot", lambda: load_multimodal_predict_fn(TrajectoryTransformer, "transformer_full.pt")),
     ModelSpec("lstm", "LSTM (baseline)", "brown", "solid", lambda: load_multimodal_predict_fn(LSTMTrajectoryModel, "lstm.pt")),
 ]

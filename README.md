@@ -53,6 +53,7 @@ python hitl/flag_uncertain.py            # flag top ~10% most uncertain hard-tra
 streamlit run hitl/review_app.py         # human review + correction (interactive)
 python models/finetune_round2.py         # fine-tune round 2 on HITL-corrected data -> fine-tuned-v2
 python models/train_lstm.py              # train the LSTM comparison architecture (full train split)
+python models/train_transformer_full.py  # controlled experiment: transformer, same full-split training as the LSTM
 python viz/scene_overlay.py              # generate the figures below
 python evaluation/moving_subset_analysis.py  # log every model's performance on genuinely moving vehicles
 streamlit run viz/dashboard.py           # interactive results dashboard (see below)
@@ -128,9 +129,10 @@ transformer's pretrain/fine-tune/HITL-fine-tune lineage below, this model
 is a standalone architecture-comparison point, not part of that pipeline.
 Same `TrajectoryDataset` and min-of-K + cross-entropy loss as the
 transformer, so the comparison isn't confounded by different data
-representations or loss functions — see the Results section for why it
-*is* still confounded by training regime (full-split single run vs.
-pretrain/fine-tune), and why that matters for interpreting the outcome.
+representations or loss functions — training regime (full-split single
+run vs. pretrain/fine-tune) is a separate confound, addressed directly by
+`models/train_transformer_full.py` (same architecture as the pretrained/
+fine-tuned lineage, trained the LSTM's way) — see Results.
 
 **Phase 3 — pretrain.** A compact self-attention encoder over 2s of past
 motion, fused with an MLP-encoded context vector (kinematics + 3-nearest-
@@ -213,24 +215,35 @@ below). Before that:
   labels (~1%). A small effect size from a small number of corrections is
   the expected, honest outcome here — not a shortcoming of the approach.
 
-**About that LSTM result — an important confound, not a clean "LSTM beats
-Transformer" claim.** The LSTM is trained differently from the
-transformer: one training run on the *full* train split (easy + hard
-combined), vs. the transformer's pretrain-on-easy → fine-tune-on-hard →
-fine-tune-again-on-HITL-corrections lineage. Two things changed at once
-— architecture *and* training regime — and this project hasn't run the
-controlled experiment that would isolate which one actually drives the
-gap (training the transformer on the full split in one pass, or putting
-the LSTM through the same pretrain/fine-tune pipeline). My honest guess is
-training regime matters more than architecture here: fragmenting an
-already-small dataset (2,388 train rows) into a 1,150-row pretrain stage
-and two separate ~1,238-row fine-tune stages gives each stage much less
-data than one pass over everything, and Phase 4 already showed fine-
-tuning on a small slice can hurt more than help. That's a real, useful
-finding about *pipeline design* on small data — but it's not yet
-evidence that LSTMs are simply better than attention for this task, and
-I'd want the controlled version before claiming that. Flagged here
-instead of quietly presenting the LSTM as an unqualified win.
+**About that LSTM result — I ran the controlled experiment, and it
+mostly held up.** The LSTM is trained differently from the transformer:
+one training run on the *full* train split, vs. the transformer's
+pretrain-on-easy → fine-tune-on-hard → fine-tune-again-on-HITL-
+corrections lineage. That's two confounded variables — architecture and
+training regime — so `models/train_transformer_full.py` trains the exact
+same `TrajectoryTransformer` architecture the same way the LSTM is
+trained (full train split, one pass, identical loss/epochs/batch size)
+to isolate the two:
+
+| Model | minADE (m), test/all | minADE (m), moving vehicles only |
+|---|---|---|
+| Transformer, pretrained (fragmented pipeline) | 0.758 | 5.791 |
+| **Transformer, full-split (controlled)** | **0.750** | **4.477** |
+| LSTM (baseline) | 0.265 | 2.738 |
+
+Training regime turned out to matter *less* than my original guess:
+giving the transformer the same full-split training as the LSTM barely
+moved the aggregate number (0.758 → 0.750) and only partially closed the
+moving-vehicle gap (5.791 → 4.477, still nearly double the LSTM's 2.738).
+**Architecture accounts for most of the remaining gap** — the LSTM's
+recurrent, autoregressive decoder (one step conditions on the last)
+appears to have a real, substantial edge over the transformer's parallel
+attention-based decoding for this task, independent of how the data is
+split across training stages. That's a genuine, if narrow and single-
+dataset, finding rather than an artifact of an unfair comparison — logged
+as its own model (`Transformer (full-split)`) in
+[`results/metrics_comparison.md`](results/metrics_comparison.md) so the
+before/after is auditable.
 
 ### The moving-vehicle subset
 
@@ -249,6 +262,7 @@ velocity, and the LSTM's lead widens further:
 | Transformer, pretrained | 5.791 | 13.383 | 0.921 |
 | Transformer, fine-tuned-v1 | 5.493 | 12.898 | 0.889 |
 | Transformer, fine-tuned-v2 | 5.434 | 12.870 | 0.873 |
+| Transformer, full-split (controlled) | 4.477 | 10.456 | 0.873 |
 | **LSTM (baseline)** | **2.738** | **6.391** | 0.921 |
 
 Ranked by minADE, the LSTM's lead over the second-best model (XGBoost,
@@ -331,12 +345,17 @@ itself doesn't mean the data is broken.
 - **Fine-tuning on 6 scenes is overfitting-prone**, as shown by round 1's
   test regression. More scenes, stronger regularization, or early stopping
   keyed to a larger/more representative validation set would help.
-- **The LSTM-vs-transformer comparison isn't controlled for training
-  regime** (see Results) — the next concrete experiment would be training
-  the transformer on the full split in one pass (matching the LSTM) and/or
-  running the LSTM through the same pretrain/fine-tune/HITL pipeline, to
-  find out whether the LSTM's advantage is really about architecture or
-  about not fragmenting an already-small dataset across pipeline stages.
+- **The controlled LSTM-vs-transformer experiment (see Results) only
+  isolates one factor.** `models/train_transformer_full.py` confirmed
+  architecture, not training regime, explains most of the gap — but that
+  experiment held the architecture's own hyperparameters fixed (d_model,
+  layer count, etc., never tuned in this project for either model). A
+  fuller ablation would also vary the LSTM's hidden size and the
+  transformer's depth/width to check the gap isn't just "the LSTM
+  happened to get a better parameter count for this data size."
+  Also worth running the reverse direction: putting the LSTM through the
+  same pretrain/fine-tune/HITL pipeline, to see if it's similarly
+  overfitting-prone on small fragmented slices.
 - **The transformer only sees 3 nearest neighbors and no map-vector
   encoding** (map context is used for the easy/hard split and the HITL
   viewer, not as a model input). A production model would encode the full
