@@ -13,19 +13,15 @@ acceleration/heading-change-rate yet) or when fewer than 3 neighbors are
 present — they're passed through as-is.
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import joblib
 import numpy as np
 import pandas as pd
 from sklearn.multioutput import MultiOutputRegressor
 from xgboost import XGBRegressor
 
-from evaluation.evaluate import filter_difficulty, future_xy, load_split, log_metrics
-from evaluation.metrics import batch_metrics
+from trajflow.evaluation.evaluate import filter_difficulty, future_xy, load_split, log_metrics
+from trajflow.evaluation.metrics import batch_metrics
+from trajflow.paths import CHECKPOINTS_DIR
 
 FUTURE_STEPS = 12
 FEATURE_COLS = [
@@ -56,7 +52,7 @@ FEATURE_COLS = [
     "neighbor_density_count",
 ]
 TARGET_COLS = [f"future_{axis}_{i}" for i in range(FUTURE_STEPS) for axis in ("x", "y")]
-MODEL_PATH = Path(__file__).resolve().parent / "checkpoints" / "xgb_baseline.joblib"
+MODEL_PATH = CHECKPOINTS_DIR / "xgb_baseline.joblib"
 
 
 def make_features(df: pd.DataFrame) -> np.ndarray:

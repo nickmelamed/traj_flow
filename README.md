@@ -21,11 +21,20 @@ including the ones where a "smarter" model loses to a one-line baseline.
 
 ## Setup
 
+TrajFlow is a real installable package (`src/trajflow/`, PEP 621
+`pyproject.toml`) — clone it, create a virtualenv, and install it editable:
+
 ```bash
 python3.11 -m venv traj
 source traj/bin/activate
-pip install -r requirements.txt
+pip install -e .
 ```
+
+That single `pip install -e .` pulls in every pinned dependency (torch,
+nuscenes-devkit, xgboost, streamlit, etc. — see `pyproject.toml`) and
+registers a `trajflow-*` console command for every pipeline stage below, so
+nothing needs to be run with `python path/to/script.py` or manual
+`PYTHONPATH`/`sys.path` hacks.
 
 On macOS, XGBoost additionally requires the OpenMP runtime:
 
@@ -34,39 +43,56 @@ brew install libomp
 ```
 
 nuScenes mini requires a free account and a license click-through that
-can't be scripted — `python data/download.py` will tell you exactly what
-to download and where to put it.
+can't be scripted — `trajflow-download` will tell you exactly what to
+download and where to put it.
 
 ## Pipeline / how to reproduce
 
-Each stage is a standalone script, run in order from the repo root:
+Every stage is a `trajflow-*` console command (installed by `pip install
+-e .` above), run in order from the repo root:
 
 ```bash
-python data/download.py                 # check/extract nuScenes mini + map expansion
-python data/preprocess.py                # feature engineering, easy/hard split, train/val/test parquet
-python models/baseline_cv.py             # constant-velocity baseline
-python models/baseline_ca.py             # constant-acceleration baseline
-python models/baseline_xgb.py            # XGBoost baseline
-python models/train_pretrain.py          # pretrain transformer on "easy" scenes
-python models/finetune.py                # fine-tune on "hard" scenes -> fine-tuned-v1
-python hitl/flag_uncertain.py            # flag top ~10% most uncertain hard-train examples
-streamlit run hitl/review_app.py         # human review + correction (interactive)
-python models/finetune_round2.py         # fine-tune round 2 on HITL-corrected data -> fine-tuned-v2
-python models/train_lstm.py              # train the LSTM comparison architecture (full train split)
-python models/train_transformer_full.py  # controlled experiment: transformer, same full-split training as the LSTM
-python viz/scene_overlay.py              # generate the figures below
-python evaluation/moving_subset_analysis.py  # log every model's performance on genuinely moving vehicles
-streamlit run viz/dashboard.py           # interactive results dashboard (see below)
+trajflow-download                 # check/extract nuScenes mini + map expansion
+trajflow-preprocess                # feature engineering, easy/hard split, train/val/test parquet
+trajflow-baseline-cv               # constant-velocity baseline
+trajflow-baseline-ca               # constant-acceleration baseline
+trajflow-baseline-xgb              # XGBoost baseline
+trajflow-pretrain                  # pretrain transformer on "easy" scenes
+trajflow-finetune                  # fine-tune on "hard" scenes -> fine-tuned-v1
+trajflow-flag-uncertain            # flag top ~10% most uncertain hard-train examples
+trajflow-review-app                # human review + correction (interactive, Streamlit)
+trajflow-finetune-round2           # fine-tune round 2 on HITL-corrected data -> fine-tuned-v2
+trajflow-train-lstm                # train the LSTM comparison architecture (full train split)
+trajflow-train-transformer-full    # controlled experiment: transformer, same full-split training as the LSTM
+trajflow-scene-overlay             # generate the figures below
+trajflow-moving-subset-analysis    # log every model's performance on genuinely moving vehicles
+trajflow-dashboard                 # interactive results dashboard (see below)
 ```
 
 Every script appends to [`results/metrics_comparison.md`](results/metrics_comparison.md)
 as it runs, so that file is the single source of truth for every metric in
 this README.
 
+**One-command run:** [`scripts/run_pipeline.sh`](scripts/run_pipeline.sh) runs
+every non-interactive stage above in order and pauses right before the HITL
+review step; run it again with `--resume-after-hitl` after completing a
+review pass to fine-tune round 2 and regenerate the figures.
+
+```bash
+./scripts/run_pipeline.sh
+# ... complete a review pass in the app it points you to ...
+./scripts/run_pipeline.sh --resume-after-hitl
+```
+
+Data, checkpoints, and results all live at the repo root next to `src/`
+(`data/`, `checkpoints/`, `artifacts/`, `corrections/`, `results/`) rather
+than inside the package, so they persist across reinstalls — see
+`src/trajflow/paths.py` for the exact layout.
+
 ### Results dashboard
 
-`streamlit run viz/dashboard.py` — a read-only companion to the HITL
-review app (no correction controls, just exploration):
+`trajflow-dashboard` — a read-only companion to the HITL review app (no
+correction controls, just exploration):
 
 - **Metrics tab**: filter `results/metrics_comparison.md` by eval split /
   difficulty, a bar chart per metric, and the full sortable table with
@@ -81,12 +107,12 @@ review app (no correction controls, just exploration):
 ## Data
 
 [nuScenes mini](https://www.nuscenes.org/) has 10 scenes (404 samples, 4
-maps). Per vehicle instance/sample, `data/preprocess.py` extracts 2s of
+maps). Per vehicle instance/sample, `src/trajflow/data/preprocess.py` extracts 2s of
 past + 6s of future agent-centric trajectory via the devkit's
 `PredictHelper`, engineers kinematic + nearest-neighbor features, and
 classifies each example as **easy** or **hard** based on neighbor density
 and intersection proximity (thresholds tuned against this actual dataset —
-see `data/preprocess.py` for why the literature-typical radii didn't
+see `src/trajflow/data/preprocess.py` for why the literature-typical radii didn't
 transfer). Of 9,648 candidate examples, 4,715 have a full 6s future and are
 kept:
 
@@ -118,7 +144,7 @@ XGBoost (`MultiOutputRegressor` over `XGBRegressor`) predicts the 24-dim
 flattened future waypoint vector from engineered features, trained on the
 full train split.
 
-**An LSTM comparison architecture** (`models/lstm.py`, also added in a
+**An LSTM comparison architecture** (`src/trajflow/models/lstm.py`, also added in a
 later pass): an LSTM encodes 2s of past motion, fused with the same
 context vector the transformer uses, and decodes K=6 candidate futures
 autoregressively (one `LSTMCell` step per future timestep, feeding each
@@ -131,7 +157,7 @@ Same `TrajectoryDataset` and min-of-K + cross-entropy loss as the
 transformer, so the comparison isn't confounded by different data
 representations or loss functions — training regime (full-split single
 run vs. pretrain/fine-tune) is a separate confound, addressed directly by
-`models/train_transformer_full.py` (same architecture as the pretrained/
+`src/trajflow/models/train_transformer_full.py` (same architecture as the pretrained/
 fine-tuned lineage, trained the LSTM's way) — see Results.
 
 **Phase 3 — pretrain.** A compact self-attention encoder over 2s of past
@@ -146,13 +172,13 @@ val-set minADE.
 checkpoint, fine-tuned on the **hard** split with a lower LR and fewer
 epochs, producing `fine-tuned-v1`.
 
-**Phase 5 — HITL flagging + review.** `hitl/flag_uncertain.py` scores the
+**Phase 5 — HITL flagging + review.** `src/trajflow/hitl/flag_uncertain.py` scores the
 hard-scene **training** examples (not test — see the script's docstring:
 flagging test examples would mean training on corrected test labels and
 then evaluating on those same instances, which would invalidate the
 before/after comparison) by combining transformer mode-endpoint spread
 with XGBoost/transformer disagreement, and flags the top ~10% (124 of
-1,238) for review. `hitl/review_app.py` (Streamlit) shows each flagged
+1,238) for review. `src/trajflow/hitl/review_app.py` (Streamlit) shows each flagged
 example's past, nearby lane geometry, ground truth, all 6 transformer
 modes, and the XGBoost prediction; the reviewer accepts, corrects (via 3
 adjustable key waypoints auto-smoothed into the full path, with a live
@@ -194,7 +220,7 @@ below). Before that:
   small spurious acceleration estimate produces a >100m overshoot by t=6s
   for an otherwise near-stationary vehicle. A textbook fragility of naive
   higher-order kinematic extrapolation, not a bug (verified on specific
-  examples — see `models/baseline_ca.py`).
+  examples — see `src/trajflow/models/baseline_ca.py`).
 - **XGBoost is the weakest learned model.** Two contributing causes, both
   found and fixed/documented during the project: (1) an early version
   leaked a non-rotation-invariant absolute-heading feature that let the
@@ -220,7 +246,7 @@ mostly held up.** The LSTM is trained differently from the transformer:
 one training run on the *full* train split, vs. the transformer's
 pretrain-on-easy → fine-tune-on-hard → fine-tune-again-on-HITL-
 corrections lineage. That's two confounded variables — architecture and
-training regime — so `models/train_transformer_full.py` trains the exact
+training regime — so `src/trajflow/models/train_transformer_full.py` trains the exact
 same `TrajectoryTransformer` architecture the same way the LSTM is
 trained (full train split, one pass, identical loss/epochs/batch size)
 to isolate the two:
@@ -276,7 +302,7 @@ better predictors once a vehicle is actually doing something interesting.
 Logged as its own rows in
 [`results/metrics_comparison.md`](results/metrics_comparison.md)
 (phase 7, difficulty=`moving (>5m displacement)`), generated by
-`evaluation/moving_subset_analysis.py` for every registered model.
+`src/trajflow/evaluation/moving_subset_analysis.py` for every registered model.
 
 ### Figures
 
@@ -346,7 +372,7 @@ itself doesn't mean the data is broken.
   test regression. More scenes, stronger regularization, or early stopping
   keyed to a larger/more representative validation set would help.
 - **The controlled LSTM-vs-transformer experiment (see Results) only
-  isolates one factor.** `models/train_transformer_full.py` confirmed
+  isolates one factor.** `src/trajflow/models/train_transformer_full.py` confirmed
   architecture, not training regime, explains most of the gap — but that
   experiment held the architecture's own hyperparameters fixed (d_model,
   layer count, etc., never tuned in this project for either model). A
@@ -376,17 +402,30 @@ itself doesn't mean the data is broken.
 ## Repo layout
 
 See [`CLAUDE.md`](CLAUDE.md) for the full build spec, phase breakdown, and
-acceptance criteria driving this project.
+acceptance criteria driving this project. (The original spec put every
+module at the repo root; it was later reorganized into an installable
+`src/` package — see "Setup" above — for a one-command, `pip install
+-e .` reproducible install. The phase plan and acceptance criteria are
+unchanged.)
 
 ```
-data/            download + preprocessing, schema doc
-models/          baselines (CV, CA, XGBoost), transformer + LSTM architectures,
+pyproject.toml           dependencies + trajflow-* console-script entry points
+scripts/run_pipeline.sh  one-command runner for the whole non-interactive pipeline
+
+src/trajflow/
+  data/          download + preprocessing, schema doc
+  models/        baselines (CV, CA, XGBoost), transformer + LSTM architectures,
                  pretrain/fine-tune scripts
-evaluation/      metrics (minADE/minFDE/MissRate), comparison-table logging,
+  evaluation/    metrics (minADE/minFDE/MissRate), comparison-table logging,
                  moving-vehicle-subset analysis
-hitl/            uncertainty flagging + Streamlit review app
-viz/             model registry (shared prediction interface for all 7 models),
+  hitl/          uncertainty flagging + Streamlit review app
+  viz/           model registry (shared prediction interface for all 7 models),
                  scene overlay figure generation, interactive results dashboard
-results/         metrics_comparison.md + figures/
+  paths.py       single source of truth for every data/artifact directory below
+
+data/            nuScenes mini (gitignored) + processed/ parquet (gitignored) + SCHEMA.md
+checkpoints/     trained model weights (gitignored — regenerable)
+artifacts/       HITL flagging output, e.g. flagged.parquet (gitignored)
 corrections/     HITL reviewer output (gitignored — personal review data)
+results/         metrics_comparison.md + figures/
 ```

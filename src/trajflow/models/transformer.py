@@ -11,18 +11,13 @@ feature, rather than silently imputed — the model can learn to
 distinguish "value is 0" from "value is unknown".
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import Dataset
 
-from data.preprocess import FUTURE_STEPS, PAST_STEPS
+from trajflow.data.preprocess import FUTURE_STEPS, PAST_STEPS
 
 N_SCALAR_FEATS = 3  # velocity, acceleration, heading_change_rate
 # NOTE: raw `heading` (absolute global-frame yaw) is deliberately excluded.

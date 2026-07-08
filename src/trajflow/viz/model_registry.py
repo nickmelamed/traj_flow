@@ -20,8 +20,6 @@ casing single-hypothesis ones.
 """
 
 import os
-import sys
-from pathlib import Path
 from typing import Callable, NamedTuple
 
 # Must be set before torch/xgboost are imported: loading both libraries in
@@ -30,25 +28,22 @@ from typing import Callable, NamedTuple
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import joblib
 import numpy as np
 import pandas as pd
 
-from models.baseline_xgb import MODEL_PATH as XGB_MODEL_PATH
-from models.baseline_xgb import make_features as xgb_make_features
+from trajflow.models.baseline_xgb import MODEL_PATH as XGB_MODEL_PATH
+from trajflow.models.baseline_xgb import make_features as xgb_make_features
 
 import torch
 from torch.utils.data import DataLoader
 
-from data.preprocess import FUTURE_STEPS
-from models.baseline_ca import predict_ca
-from models.baseline_cv import predict_cv
-from models.lstm import LSTMTrajectoryModel
-from models.transformer import TrajectoryDataset, TrajectoryTransformer
-
-CHECKPOINTS_DIR = Path(__file__).resolve().parent.parent / "models" / "checkpoints"
+from trajflow.data.preprocess import FUTURE_STEPS
+from trajflow.models.baseline_ca import predict_ca
+from trajflow.models.baseline_cv import predict_cv
+from trajflow.models.lstm import LSTMTrajectoryModel
+from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer
+from trajflow.paths import CHECKPOINTS_DIR
 
 # df -> (traj [N, K, T, 2], probs [N, K])
 PredictFn = Callable[[pd.DataFrame], tuple]

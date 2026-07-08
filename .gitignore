@@ -3,15 +3,20 @@ __pycache__/
 *.pyc
 .DS_Store
 
+# packaging build artifacts
+*.egg-info/
+build/
+dist/
+
 # nuScenes raw data (large, not committed)
 data/nuscenes/
 data/raw/
 
 # processed data + model artifacts (large, regenerable)
 data/processed/
-models/checkpoints/
+checkpoints/
+artifacts/
 *.ckpt
 *.pt
 *.joblib
-hitl/flagged.parquet
 corrections/

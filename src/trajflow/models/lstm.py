@@ -11,16 +11,11 @@ predicting a position delta and feeding it back as the next input) rather
 than in parallel via attention.
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import torch
 from torch import nn
 
-from data.preprocess import FUTURE_STEPS, PAST_STEPS
-from models.transformer import CONTEXT_DIM
+from trajflow.data.preprocess import FUTURE_STEPS, PAST_STEPS
+from trajflow.models.transformer import CONTEXT_DIM
 
 
 class LSTMTrajectoryModel(nn.Module):

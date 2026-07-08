@@ -34,8 +34,9 @@ from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
 from nuscenes.utils.splits import mini_train, mini_val
 
-DEFAULT_DATAROOT = Path(__file__).resolve().parent / "nuscenes"
-DEFAULT_OUT = Path(__file__).resolve().parent / "processed"
+from trajflow.paths import NUSCENES_ROOT as DEFAULT_DATAROOT
+from trajflow.paths import PROCESSED_DIR as DEFAULT_OUT
+from trajflow.paths import SCHEMA_PATH
 
 PAST_SECONDS = 2.0
 FUTURE_SECONDS = 6.0
@@ -247,7 +248,7 @@ def main() -> int:
         nusc = NuScenes(version=args.version, dataroot=str(args.dataroot), verbose=True)
     except Exception as exc:  # noqa: BLE001 - surface a clear pointer, not a stack trace
         print(f"ERROR: could not load NuScenes from {args.dataroot}: {exc}", file=sys.stderr)
-        print("Run `python data/download.py` first to check/complete the dataset setup.", file=sys.stderr)
+        print("Run `trajflow-download` first to check/complete the dataset setup.", file=sys.stderr)
         return 1
 
     helper = PredictHelper(nusc)
@@ -258,7 +259,7 @@ def main() -> int:
     df = pd.DataFrame(rows)
 
     args.out.mkdir(parents=True, exist_ok=True)
-    write_schema_doc(Path(__file__).resolve().parent / "SCHEMA.md")
+    write_schema_doc(SCHEMA_PATH)
 
     print("\n=== Preprocessing summary ===")
     print(f"Candidate vehicle instance-samples: {stats['candidates']}")

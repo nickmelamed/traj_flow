@@ -9,20 +9,18 @@ for comparability against the other rows in the table.
 """
 
 import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from evaluation.evaluate import filter_difficulty, load_split, log_metrics
-from models.train_pretrain import evaluate_on_df, set_seed
-from models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.evaluation.evaluate import filter_difficulty, load_split, log_metrics
+from trajflow.models.train_pretrain import evaluate_on_df, set_seed
+from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.paths import CHECKPOINTS_DIR
 
-PRETRAINED_CHECKPOINT = Path(__file__).resolve().parent / "checkpoints" / "pretrained.pt"
-CHECKPOINT_PATH = Path(__file__).resolve().parent / "checkpoints" / "finetuned_v1.pt"
+PRETRAINED_CHECKPOINT = CHECKPOINTS_DIR / "pretrained.pt"
+CHECKPOINT_PATH = CHECKPOINTS_DIR / "finetuned_v1.pt"
 EPOCHS = 60
 LR = 2e-4
 BATCH_SIZE = 64
@@ -33,7 +31,7 @@ def main() -> None:
     set_seed(SEED)
 
     if not PRETRAINED_CHECKPOINT.exists():
-        print(f"ERROR: no pretrained checkpoint at {PRETRAINED_CHECKPOINT}. Run models/train_pretrain.py first.", file=sys.stderr)
+        print(f"ERROR: no pretrained checkpoint at {PRETRAINED_CHECKPOINT}. Run trajflow-pretrain first.", file=sys.stderr)
         raise SystemExit(1)
 
     train_df = filter_difficulty(load_split("train"), "hard")

@@ -7,16 +7,11 @@ possible baseline, meant to calibrate how much the learned models below
 actually buy us.
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import numpy as np
 import pandas as pd
 
-from evaluation.evaluate import filter_difficulty, future_xy, load_split, log_metrics
-from evaluation.metrics import batch_metrics
+from trajflow.evaluation.evaluate import filter_difficulty, future_xy, load_split, log_metrics
+from trajflow.evaluation.metrics import batch_metrics
 
 DT = 0.5  # seconds between timesteps (2 Hz)
 FUTURE_STEPS = 12

@@ -6,14 +6,10 @@ imports `load_split`, `future_xy`, and `log_metrics` from here so the
 comparison table is built up consistently across phases.
 """
 
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-PROCESSED_DIR = REPO_ROOT / "data" / "processed"
-RESULTS_PATH = REPO_ROOT / "results" / "metrics_comparison.md"
+from trajflow.paths import PROCESSED_DIR, RESULTS_PATH
 
 FUTURE_STEPS = 12
 

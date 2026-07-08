@@ -1,7 +1,7 @@
 """Interactive results dashboard for TrajFlow.
 
 Run with:
-    streamlit run viz/dashboard.py
+    trajflow-dashboard
 
 Two tabs:
   - Metrics: a sortable/filterable view of results/metrics_comparison.md
@@ -14,13 +14,10 @@ Two tabs:
 """
 
 import os
-import sys
 from pathlib import Path
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import pandas as pd
@@ -28,10 +25,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from viz.model_registry import MODEL_SPECS
+from trajflow.viz.model_registry import MODEL_SPECS
 
-from evaluation.evaluate import future_xy, load_split
-from evaluation.metrics import batch_metrics
+from trajflow.evaluation.evaluate import future_xy, load_split
+from trajflow.evaluation.metrics import batch_metrics
 
 from nuscenes.map_expansion.arcline_path_utils import discretize_lane
 from nuscenes.map_expansion.map_api import NuScenesMap
@@ -39,9 +36,9 @@ from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
 from nuscenes.prediction.helper import convert_global_coords_to_local
 
-from data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
+from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
+from trajflow.paths import RESULTS_PATH as METRICS_PATH
 
-METRICS_PATH = Path(__file__).resolve().parent.parent / "results" / "metrics_comparison.md"
 MAP_RADIUS = 40.0
 NUMERIC_COLS = ["minADE (m)", "minFDE (m)", "Miss Rate @2m"]
 
@@ -154,7 +151,7 @@ def scene_browser_tab() -> None:
     st.header("Scene Browser")
     st.caption(
         "Pick any test example and see every model's prediction overlaid. Read-only -- "
-        "for reviewing/correcting training labels, use `streamlit run hitl/review_app.py` instead."
+        "for reviewing/correcting training labels, use `trajflow-review-app` instead."
     )
 
     test_df = load_test_df()

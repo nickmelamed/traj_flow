@@ -6,20 +6,16 @@ metrics are logged both on val (canonical) and on the test splits (for
 direct comparability with the baselines and the Phase 4 fine-tuned model).
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from evaluation.evaluate import filter_difficulty, future_xy, load_split, log_metrics
-from evaluation.metrics import batch_metrics
-from models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.evaluation.evaluate import filter_difficulty, future_xy, load_split, log_metrics
+from trajflow.evaluation.metrics import batch_metrics
+from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.paths import CHECKPOINTS_DIR
 
-CHECKPOINT_PATH = Path(__file__).resolve().parent / "checkpoints" / "pretrained.pt"
+CHECKPOINT_PATH = CHECKPOINTS_DIR / "pretrained.pt"
 EPOCHS = 150
 LR = 1e-3
 BATCH_SIZE = 64

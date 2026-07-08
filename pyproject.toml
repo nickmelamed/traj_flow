@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trajflow"
+version = "0.1.0"
+description = "Trajectory prediction pipeline: classical baselines, a fine-tuned trajectory transformer, and a human-in-the-loop active learning loop, on nuScenes mini."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch==2.12.1",
+    "nuscenes-devkit==1.2.0",
+    "pyquaternion==0.9.9",
+    "xgboost==3.2.0",
+    "joblib==1.5.3",
+    "streamlit==1.59.0",
+    "pandas==3.0.3",
+    "numpy==1.26.4",
+    "matplotlib==3.11.0",
+    "plotly==6.8.0",
+    "pyarrow==24.0.0",
+    "scikit-learn==1.9.0",
+    "scipy==1.17.1",
+    "tqdm==4.68.3",
+]
+
+[project.scripts]
+trajflow-download = "trajflow.data.download:main"
+trajflow-preprocess = "trajflow.data.preprocess:main"
+trajflow-baseline-cv = "trajflow.models.baseline_cv:main"
+trajflow-baseline-ca = "trajflow.models.baseline_ca:main"
+trajflow-baseline-xgb = "trajflow.models.baseline_xgb:main"
+trajflow-pretrain = "trajflow.models.train_pretrain:main"
+trajflow-finetune = "trajflow.models.finetune:main"
+trajflow-finetune-round2 = "trajflow.models.finetune_round2:main"
+trajflow-train-lstm = "trajflow.models.train_lstm:main"
+trajflow-train-transformer-full = "trajflow.models.train_transformer_full:main"
+trajflow-flag-uncertain = "trajflow.hitl.flag_uncertain:main"
+trajflow-moving-subset-analysis = "trajflow.evaluation.moving_subset_analysis:main"
+trajflow-scene-overlay = "trajflow.viz.scene_overlay:main"
+trajflow-review-app = "trajflow.cli:run_review_app"
+trajflow-dashboard = "trajflow.cli:run_dashboard"
+
+[tool.setuptools.packages.find]
+where = ["src"]

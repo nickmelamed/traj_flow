@@ -12,8 +12,8 @@ the license on your behalf, so it only does two things:
    guessing at a broken path.
 
 Usage:
-    python data/download.py                          # check / verify only
-    python data/download.py --archive PATH            # extract an archive
+    trajflow-download                          # check / verify only
+    trajflow-download --archive PATH           # extract an archive
                                                        # (.tgz or .zip) into
                                                        # place, then verify
 """
@@ -24,7 +24,7 @@ import tarfile
 import zipfile
 from pathlib import Path
 
-DATA_ROOT = Path(__file__).resolve().parent / "nuscenes"
+from trajflow.paths import NUSCENES_ROOT as DATA_ROOT
 VERSION = "v1.0-mini"
 
 REQUIRED_SUBDIRS = ["maps", "samples", "sweeps", VERSION]
@@ -58,8 +58,8 @@ cannot be automated. To proceed:
      enough for that.
   5. Place both downloaded archives somewhere on disk, then run:
 
-       python data/download.py --archive /path/to/v1.0-mini.tgz
-       python data/download.py --archive /path/to/nuscenes-map-expansion-v1.3.zip
+       trajflow-download --archive /path/to/v1.0-mini.tgz
+       trajflow-download --archive /path/to/nuscenes-map-expansion-v1.3.zip
 
      which will extract each into {DATA_ROOT} and verify everything loads.
 
@@ -68,7 +68,7 @@ cannot be automated. To proceed:
        {DATA_ROOT}/samples/
        {DATA_ROOT}/sweeps/
        {DATA_ROOT}/v1.0-mini/
-      then re-run `python data/download.py` with no arguments to verify.)
+      then re-run `trajflow-download` with no arguments to verify.)
 
 Once the files are in place, re-run this script (or continue the
 pipeline) and it will proceed automatically.

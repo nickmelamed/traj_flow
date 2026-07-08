@@ -12,16 +12,11 @@ subset consistently (previously computed ad hoc for just two models
 inside viz/scene_overlay.py; this supersedes that).
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import numpy as np
 
-from evaluation.evaluate import future_xy, load_split, log_metrics
-from evaluation.metrics import batch_metrics
-from viz.model_registry import MODEL_SPECS
+from trajflow.evaluation.evaluate import future_xy, load_split, log_metrics
+from trajflow.evaluation.metrics import batch_metrics
+from trajflow.viz.model_registry import MODEL_SPECS
 
 DISPLACEMENT_THRESHOLD = 5.0
 

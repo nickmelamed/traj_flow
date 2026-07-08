@@ -15,22 +15,19 @@ fair before/after comparison.
 """
 
 import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from evaluation.evaluate import filter_difficulty, load_split, log_metrics
-from models.train_pretrain import evaluate_on_df, set_seed
-from models.transformer import FUTURE_STEPS, TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.evaluation.evaluate import filter_difficulty, load_split, log_metrics
+from trajflow.models.train_pretrain import evaluate_on_df, set_seed
+from trajflow.models.transformer import FUTURE_STEPS, TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.paths import CHECKPOINTS_DIR, CORRECTIONS_PATH
 
-V1_CHECKPOINT = Path(__file__).resolve().parent / "checkpoints" / "finetuned_v1.pt"
-CHECKPOINT_PATH = Path(__file__).resolve().parent / "checkpoints" / "finetuned_v2.pt"
-CORRECTIONS_PATH = Path(__file__).resolve().parent.parent / "corrections" / "corrections.parquet"
+V1_CHECKPOINT = CHECKPOINTS_DIR / "finetuned_v1.pt"
+CHECKPOINT_PATH = CHECKPOINTS_DIR / "finetuned_v2.pt"
 EPOCHS = 60
 LR = 2e-4
 BATCH_SIZE = 64
@@ -62,10 +59,10 @@ def main() -> None:
     set_seed(SEED)
 
     if not V1_CHECKPOINT.exists():
-        print(f"ERROR: no round-1 checkpoint at {V1_CHECKPOINT}. Run models/finetune.py first.", file=sys.stderr)
+        print(f"ERROR: no round-1 checkpoint at {V1_CHECKPOINT}. Run trajflow-finetune first.", file=sys.stderr)
         raise SystemExit(1)
     if not CORRECTIONS_PATH.exists():
-        print(f"ERROR: no corrections found at {CORRECTIONS_PATH}. Complete a review pass in hitl/review_app.py first.", file=sys.stderr)
+        print(f"ERROR: no corrections found at {CORRECTIONS_PATH}. Complete a review pass via trajflow-review-app first.", file=sys.stderr)
         raise SystemExit(1)
 
     train_hard_df = filter_difficulty(load_split("train"), "hard").reset_index(drop=True)

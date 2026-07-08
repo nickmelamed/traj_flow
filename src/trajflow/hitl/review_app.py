@@ -2,7 +2,7 @@
 predictions (flagged by hitl/flag_uncertain.py).
 
 Run with:
-    streamlit run hitl/review_app.py
+    trajflow-review-app
 
 For each flagged example the reviewer sees: the agent's past trajectory,
 nearby lane geometry (map context), the ground-truth future, the
@@ -17,17 +17,13 @@ left off (re-submitting the same example overwrites its prior entry).
 """
 
 import os
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 # Must be set before torch/xgboost are imported: loading both libraries in
 # the same process on this macOS setup deadlocks otherwise. See the same
 # note in hitl/flag_uncertain.py.
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import joblib
 import numpy as np
@@ -37,9 +33,9 @@ import streamlit as st
 import torch
 from scipy.interpolate import CubicSpline
 
-from models.baseline_xgb import MODEL_PATH as XGB_MODEL_PATH
-from models.baseline_xgb import make_features as xgb_make_features
-from evaluation.evaluate import load_split
+from trajflow.models.baseline_xgb import MODEL_PATH as XGB_MODEL_PATH
+from trajflow.models.baseline_xgb import make_features as xgb_make_features
+from trajflow.evaluation.evaluate import load_split
 
 from nuscenes.map_expansion.arcline_path_utils import discretize_lane
 from nuscenes.map_expansion.map_api import NuScenesMap
@@ -47,12 +43,11 @@ from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
 from nuscenes.prediction.helper import convert_global_coords_to_local
 
-from data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
-from models.transformer import TrajectoryDataset, TrajectoryTransformer
+from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
+from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer
+from trajflow.paths import CHECKPOINTS_DIR, CORRECTIONS_PATH, FLAGGED_PATH
 
-FLAGGED_PATH = Path(__file__).resolve().parent / "flagged.parquet"
-CORRECTIONS_PATH = Path(__file__).resolve().parent.parent / "corrections" / "corrections.parquet"
-TRANSFORMER_CHECKPOINT = Path(__file__).resolve().parent.parent / "models" / "checkpoints" / "finetuned_v1.pt"
+TRANSFORMER_CHECKPOINT = CHECKPOINTS_DIR / "finetuned_v1.pt"
 MAP_RADIUS = 40.0
 FAILURE_MODES = ["none", "occlusion", "aggressive merge", "sensor noise", "map ambiguity"]
 FUTURE_SECONDS = 6.0
@@ -208,7 +203,7 @@ def main() -> None:
     )
 
     if not FLAGGED_PATH.exists():
-        st.error(f"No flagged examples found at {FLAGGED_PATH}. Run `python hitl/flag_uncertain.py` first.")
+        st.error(f"No flagged examples found at {FLAGGED_PATH}. Run `trajflow-flag-uncertain` first.")
         return
 
     flagged = load_flagged()

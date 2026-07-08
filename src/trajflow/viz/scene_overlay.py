@@ -32,19 +32,16 @@ learned models beat constant velocity, which the full-test-set aggregate
 "moving-vehicle subset" section.
 """
 
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
-from evaluation.evaluate import future_xy, load_split
-from models.lstm import LSTMTrajectoryModel
-from models.transformer import TrajectoryTransformer
-from viz.model_registry import load_cv_predict_fn, load_multimodal_predict_fn
+from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
+from trajflow.evaluation.evaluate import future_xy, load_split
+from trajflow.models.lstm import LSTMTrajectoryModel
+from trajflow.models.transformer import TrajectoryTransformer
+from trajflow.viz.model_registry import load_cv_predict_fn, load_multimodal_predict_fn
 
 from nuscenes.map_expansion.arcline_path_utils import discretize_lane
 from nuscenes.map_expansion.map_api import NuScenesMap
@@ -52,7 +49,8 @@ from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
 from nuscenes.prediction.helper import convert_global_coords_to_local
 
-OUTPUT_DIR = Path(__file__).resolve().parent.parent / "results" / "figures"
+from trajflow.paths import FIGURES_DIR as OUTPUT_DIR
+
 MAP_RADIUS = 40.0
 
 

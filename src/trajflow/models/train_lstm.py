@@ -5,21 +5,17 @@ transformer's pretrain-on-easy/fine-tune-on-hard structure. This model is
 a comparison baseline for architecture choice, not part of that lineage.
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from evaluation.evaluate import filter_difficulty, load_split, log_metrics
-from models.lstm import LSTMTrajectoryModel
-from models.train_pretrain import evaluate_on_df, set_seed
-from models.transformer import TrajectoryDataset, min_of_k_loss
+from trajflow.evaluation.evaluate import filter_difficulty, load_split, log_metrics
+from trajflow.models.lstm import LSTMTrajectoryModel
+from trajflow.models.train_pretrain import evaluate_on_df, set_seed
+from trajflow.models.transformer import TrajectoryDataset, min_of_k_loss
+from trajflow.paths import CHECKPOINTS_DIR
 
-CHECKPOINT_PATH = Path(__file__).resolve().parent / "checkpoints" / "lstm.pt"
+CHECKPOINT_PATH = CHECKPOINTS_DIR / "lstm.pt"
 EPOCHS = 150
 LR = 1e-3
 BATCH_SIZE = 64

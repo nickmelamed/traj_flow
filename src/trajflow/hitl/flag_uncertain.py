@@ -22,8 +22,6 @@ model is most uncertain about and get them human-corrected.
 """
 
 import os
-import sys
-from pathlib import Path
 
 # Must be set before torch/xgboost are imported: loading both libraries in
 # the same process on this macOS setup (each bundles its own OpenMP runtime)
@@ -33,28 +31,27 @@ from pathlib import Path
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import joblib
 import numpy as np
 import pandas as pd
 
-# NOTE: xgboost must be imported (directly or via models.baseline_xgb) before
-# torch in this process -- on this macOS setup, importing torch first and
-# then loading/using an xgboost model segfaults (a known OpenMP runtime
+# NOTE: xgboost must be imported (directly or via trajflow.models.baseline_xgb)
+# before torch in this process -- on this macOS setup, importing torch first
+# and then loading/using an xgboost model segfaults (a known OpenMP runtime
 # conflict between the two libraries' bundled libomp). Keep this import
 # order; see also hitl/review_app.py which has the same constraint.
-from models.baseline_xgb import MODEL_PATH as XGB_MODEL_PATH
-from models.baseline_xgb import make_features as xgb_make_features
-from evaluation.evaluate import filter_difficulty, load_split
+from trajflow.models.baseline_xgb import MODEL_PATH as XGB_MODEL_PATH
+from trajflow.models.baseline_xgb import make_features as xgb_make_features
+from trajflow.evaluation.evaluate import filter_difficulty, load_split
 
 import torch
 from torch.utils.data import DataLoader
 
-from models.transformer import TrajectoryDataset, TrajectoryTransformer
+from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer
+from trajflow.paths import CHECKPOINTS_DIR, FLAGGED_PATH
 
-TRANSFORMER_CHECKPOINT = Path(__file__).resolve().parent.parent / "models" / "checkpoints" / "finetuned_v1.pt"
-OUTPUT_PATH = Path(__file__).resolve().parent / "flagged.parquet"
+TRANSFORMER_CHECKPOINT = CHECKPOINTS_DIR / "finetuned_v1.pt"
+OUTPUT_PATH = FLAGGED_PATH
 TOP_FRACTION = 0.10
 
 

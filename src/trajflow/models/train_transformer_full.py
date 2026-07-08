@@ -13,19 +13,15 @@ script holds training regime constant so the remaining gap (if any)
 between this model and the LSTM isolates the effect of architecture.
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import torch
 from torch.utils.data import DataLoader
 
-from evaluation.evaluate import filter_difficulty, load_split, log_metrics
-from models.train_pretrain import evaluate_on_df, set_seed
-from models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.evaluation.evaluate import filter_difficulty, load_split, log_metrics
+from trajflow.models.train_pretrain import evaluate_on_df, set_seed
+from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.paths import CHECKPOINTS_DIR
 
-CHECKPOINT_PATH = Path(__file__).resolve().parent / "checkpoints" / "transformer_full.pt"
+CHECKPOINT_PATH = CHECKPOINTS_DIR / "transformer_full.pt"
 EPOCHS = 150
 LR = 1e-3
 BATCH_SIZE = 64
