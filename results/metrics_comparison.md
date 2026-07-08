@@ -32,7 +32,7 @@ See `data/SCHEMA.md` for column definitions and `CLAUDE.md` for the phase plan.
 | 2 | LSTM (baseline) | test | easy | 747 | 0.2192 | 0.3806 | 0.0241 |  |
 | 2 | LSTM (baseline) | test | hard | 879 | 0.3067 | 0.6394 | 0.0739 |  |
 | 2 | Transformer (full-split) | val | all | 701 | 1.8976 | 4.1556 | 0.3495 | model selection metric (best checkpoint by val minADE); controlled comparison against LSTM (baseline) -- same architecture as the pretrained/fine-tuned-v1/v2 lineage, but trained on the FULL train split in one pass like the LSTM, isolating architecture from training regime |
-| 2 | Transformer (full-split) | test | all | 1626 | 0.7503 | 1.3857 | 0.0646 | controlled comparison: same training regime as LSTM (baseline) -- full train split, one pass, same loss/epochs/batch size -- so the gap to LSTM's test/all minADE (0.265) isolates the effect of architecture (attention+parallel decoding vs. recurrent+autoregressive decoding); see README |
+| 2 | Transformer (full-split) | test | all | 1626 | 0.7503 | 1.3857 | 0.0646 | controlled comparison: same training regime as LSTM (baseline) -- full train split, one pass, same loss/epochs/batch size -- so the gap to LSTM's test/all minADE (0.267) isolates the effect of architecture (attention+parallel decoding vs. recurrent+autoregressive decoding); see README |
 | 2 | Transformer (full-split) | test | easy | 747 | 0.5771 | 1.0481 | 0.0495 |  |
 | 2 | Transformer (full-split) | test | hard | 879 | 0.8975 | 1.6727 | 0.0774 |  |
 | 7 | Constant Velocity | test | moving (>5m displacement) | 63 | 6.6035 | 15.5911 | 0.9524 | restricted to the 63/1626 test examples with >5m net displacement over 6s -- see README 'moving-vehicle subset' section for why this subset matters |

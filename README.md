@@ -176,7 +176,7 @@ difficulties):
 | Transformer, pretrained (easy-only) | 0.758 | 1.375 | 0.105 |
 | Transformer, fine-tuned-v1 (hard) | 0.925 | 1.776 | 0.082 |
 | Transformer, fine-tuned-v2 (post-HITL) | 0.905 | 1.776 | 0.076 |
-| **LSTM (baseline)** | **0.265** | **0.521** | **0.051** |
+| **LSTM (baseline)** | **0.267** | **0.521** | **0.051** |
 
 Full table with val-split rows and easy/hard breakdowns:
 [`results/metrics_comparison.md`](results/metrics_comparison.md).
@@ -229,7 +229,7 @@ to isolate the two:
 |---|---|---|
 | Transformer, pretrained (fragmented pipeline) | 0.758 | 5.791 |
 | **Transformer, full-split (controlled)** | **0.750** | **4.477** |
-| LSTM (baseline) | 0.265 | 2.738 |
+| LSTM (baseline) | 0.267 | 2.738 |
 
 Training regime turned out to matter *less* than my original guess:
 giving the transformer the same full-split training as the LSTM barely
