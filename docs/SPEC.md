@@ -62,8 +62,8 @@ measured results, including negative ones.
 ## Fast checks [confirmed]
 
 - Tests: `python -m pytest -q` (77 tests, about 4s, all on synthetic data).
-- Lint: `make lint` (ruff). It is in the `dev` extra but does not pass yet.
-- Types: `make typecheck` (mypy). It is in the `dev` extra but does not pass yet.
+- Lint: `make lint` (ruff). It is in the `dev` extra and passes.
+- Types: `make typecheck` (mypy). It is in the `dev` extra and passes.
 - Style: `python3 scripts/agent/check_style.py`.
 
 ## Phase 0. Environment and scaffold
