@@ -56,3 +56,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[[tool.mypy.overrides]]
+module = ["nuscenes.*", "pandas.*", "plotly.*", "joblib.*", "pyquaternion.*", "scipy.*", "sklearn.*", "tqdm.*"]
+ignore_missing_imports = true
