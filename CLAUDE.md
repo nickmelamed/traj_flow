@@ -74,8 +74,9 @@ The venv is `traj/` (Python 3.11, `pip install -e ".[dev]"`).
   output. Show commands and results, not claims.
 - Commit in small atomic Conventional Commits (`type(scope): subject`), with
   code and its tests together.
-- Do not run `git commit` yourself. Commit signing hangs in agent sessions, so
-  give the owner the message and ask them to commit.
+- Run `git commit` only when the owner asks, and wrap it in `timeout 40`.
+  SSH signing once hung in agent sessions. If it hangs, give the owner the
+  message to commit.
 - You may branch locally. Ask before pushing, opening or merging pull requests,
   tagging, or changing dependencies.
 - If you repeat a multi-step procedure, propose a skill for it in
