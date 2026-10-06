@@ -2,7 +2,7 @@
 
 Every model / eval-split / difficulty-filter combination run so far, logged honestly
 (including underperforming results — nothing is rounded or omitted to look better).
-See `data/SCHEMA.md` for column definitions and `CLAUDE.md` for the phase plan.
+See `data/SCHEMA.md` for column definitions and `docs/SPEC.md` for the phase plan.
 
 | Phase | Model | Eval Split | Difficulty | N | minADE (m) | minFDE (m) | Miss Rate @2m | Notes |
 |---|---|---|---|---|---|---|---|---|

@@ -20,3 +20,10 @@ artifacts/
 *.pt
 *.joblib
 corrections/
+
+# local copy of the mini-scale artifacts (kept outside git)
+backups/
+
+# Claude Code agent tooling
+.claude/.gate-state.json
+.claude/settings.local.json

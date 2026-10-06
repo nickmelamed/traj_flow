@@ -21,7 +21,7 @@ PREAMBLE = (
     "# TrajFlow — Metrics Comparison\n\n"
     "Every model / eval-split / difficulty-filter combination run so far, logged honestly\n"
     "(including underperforming results — nothing is rounded or omitted to look better).\n"
-    "See `data/SCHEMA.md` for column definitions and `CLAUDE.md` for the phase plan.\n\n"
+    "See `data/SCHEMA.md` for column definitions and `docs/SPEC.md` for the phase plan.\n\n"
 )
 
 
