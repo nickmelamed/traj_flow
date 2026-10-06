@@ -69,6 +69,7 @@ def main() -> None:
                 f"val_minADE={val_metrics['minADE']:.4f} | val_minFDE={val_metrics['minFDE']:.4f}"
             )
 
+    assert best_state is not None, "validation never improved"
     model.load_state_dict(best_state)
     CHECKPOINT_PATH.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), CHECKPOINT_PATH)

@@ -37,7 +37,7 @@ def set_seed(seed: int) -> None:
 
 
 @torch.no_grad()
-def predict_all(model: TrajectoryTransformer, dataset: TrajectoryDataset) -> np.ndarray:
+def predict_all(model: torch.nn.Module, dataset: TrajectoryDataset) -> np.ndarray:
     model.eval()
     loader = DataLoader(dataset, batch_size=256, shuffle=False)
     all_traj = []
@@ -47,7 +47,7 @@ def predict_all(model: TrajectoryTransformer, dataset: TrajectoryDataset) -> np.
     return np.concatenate(all_traj, axis=0)
 
 
-def evaluate_on_df(model: TrajectoryTransformer, df) -> dict:
+def evaluate_on_df(model: torch.nn.Module, df) -> dict:
     dataset = TrajectoryDataset(df)
     preds = predict_all(model, dataset)
     gts = future_xy(df)
@@ -95,6 +95,7 @@ def main() -> None:
                 f"val_minADE={val_metrics['minADE']:.4f} | val_minFDE={val_metrics['minFDE']:.4f}"
             )
 
+    assert best_state is not None, "validation never improved"
     model.load_state_dict(best_state)
     CHECKPOINT_PATH.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), CHECKPOINT_PATH)
