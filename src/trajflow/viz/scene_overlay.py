@@ -174,6 +174,7 @@ def main() -> None:
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     map_cache: dict = {}
+    selected = {}
 
     # "Typical" is selected by median IMPROVEMENT (cv_ade - final_ade), not
     # median absolute final_ade -- the latter can land on an example where
@@ -186,6 +187,7 @@ def main() -> None:
 
     easy_moving = moving[moving["difficulty"] == "easy"].sort_values("improvement")
     row = easy_moving.iloc[len(easy_moving) // 2]
+    selected["easy_typical"] = row
     plot_example(
         row, [cv_line(row.name), final_line(row.name)], map_cache, helper,
         OUTPUT_DIR / "easy_typical.png", f"{row['scene_name']} (easy, typical moving vehicle) — CV ADE={row['cv_ade']:.2f}m, final ADE={row['final_ade']:.2f}m",
@@ -199,6 +201,7 @@ def main() -> None:
     # 19m error), which isn't a convincing illustration of anything.
     hard_moving_good = moving[(moving["difficulty"] == "hard") & (moving["final_ade"] < 3.0)].sort_values("improvement", ascending=False)
     row = hard_moving_good.iloc[0]
+    selected["hard_improvement"] = row
     plot_example(
         row, [cv_line(row.name), final_line(row.name)], map_cache, helper,
         OUTPUT_DIR / "hard_improvement.png", f"{row['scene_name']} (hard, largest improvement) — CV ADE={row['cv_ade']:.2f}m, final ADE={row['final_ade']:.2f}m",
@@ -206,6 +209,7 @@ def main() -> None:
 
     hard_typical_moving = moving[moving["difficulty"] == "hard"].sort_values("improvement")
     row = hard_typical_moving.iloc[len(hard_typical_moving) // 2]
+    selected["hard_typical"] = row
     plot_example(
         row, [cv_line(row.name), final_line(row.name)], map_cache, helper,
         OUTPUT_DIR / "hard_typical.png", f"{row['scene_name']} (hard, typical moving vehicle) — CV ADE={row['cv_ade']:.2f}m, final ADE={row['final_ade']:.2f}m",
@@ -217,6 +221,7 @@ def main() -> None:
     # not (yet) a controlled architecture comparison.
     lstm_typical = moving.sort_values("lstm_ade")
     row = lstm_typical.iloc[len(lstm_typical) // 2]
+    selected["lstm_typical"] = row
     plot_example(
         row,
         [cv_line(row.name), final_line(row.name), ("LSTM (baseline)", lstm_preds[row.name], "tab:brown", "-")],
@@ -225,6 +230,10 @@ def main() -> None:
         f"{row['scene_name']} (typical moving vehicle)\n"
         f"CV ADE={row['cv_ade']:.2f}m, fine-tuned-v2 ADE={row['final_ade']:.2f}m, LSTM ADE={row['lstm_ade']:.2f}m",
     )
+
+    print("Caption values (ADE in metres):")
+    for name, r in selected.items():
+        print(f"  {name}: {r['scene_name']} CV={r['cv_ade']:.2f} fine-tuned-v2={r['final_ade']:.2f} LSTM={r['lstm_ade']:.2f}")
 
     print(f"Saved figures to {OUTPUT_DIR}:")
     for fname in ["easy_typical.png", "hard_improvement.png", "hard_typical.png", "lstm_typical.png"]:
