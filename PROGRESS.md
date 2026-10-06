@@ -38,6 +38,7 @@ section is loaded at the start of each session.
 - Phase 3: style cleanup. Stale docstring numbers in `finetune_round2.py` fixed
   to 111 accepted and 13 corrected.
 - Phase 4: tests added, mutation spot-check caught all three mutants.
+- README prose rewritten after review. No numbers changed. Read it once for tone.
 
 ## Open questions for the owner
 
@@ -59,8 +60,6 @@ section is loaded at the start of each session.
 - **Spec items still tagged [inferred]:** same test set for every comparison, val-only
   model selection, no absolute heading in learned models, and whether the
   scale-up is infrastructure only.
-- **README prose edits were mechanical.** Dashes became commas or sentence
-  breaks. Read it once for tone.
 - **Corrections are gitignored.** The HITL labels behind fine-tuned-v2 are not
   reproducible from the repo. Consider committing the mini `corrections.parquet`.
 - **No data checksums** exist for processed data or checkpoints.
