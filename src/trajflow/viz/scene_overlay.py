@@ -36,20 +36,18 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
-from trajflow.evaluation.evaluate import future_xy, load_split
-from trajflow.models.lstm import LSTMTrajectoryModel
-from trajflow.models.transformer import TrajectoryTransformer
-from trajflow.viz.model_registry import load_cv_predict_fn, load_multimodal_predict_fn
-
 from nuscenes.map_expansion.arcline_path_utils import discretize_lane
 from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
 from nuscenes.prediction.helper import convert_global_coords_to_local
 
+from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
+from trajflow.evaluation.evaluate import future_xy, load_split
+from trajflow.models.lstm import LSTMTrajectoryModel
+from trajflow.models.transformer import TrajectoryTransformer
 from trajflow.paths import FIGURES_DIR as OUTPUT_DIR
+from trajflow.viz.model_registry import load_cv_predict_fn, load_multimodal_predict_fn
 
 MAP_RADIUS = 40.0
 

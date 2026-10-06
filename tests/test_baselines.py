@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 
 from trajflow.models.baseline_ca import DT, FUTURE_STEPS, predict_ca
 from trajflow.models.baseline_cv import predict_cv

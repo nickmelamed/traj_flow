@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
+# isort: off
 import joblib
 import numpy as np
 import pandas as pd
@@ -46,6 +47,7 @@ from nuscenes.prediction.helper import convert_global_coords_to_local
 from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
 from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer
 from trajflow.paths import CHECKPOINTS_DIR, CORRECTIONS_PATH, FLAGGED_PATH
+# isort: on
 
 TRANSFORMER_CHECKPOINT = CHECKPOINTS_DIR / "finetuned_v1.pt"
 MAP_RADIUS = 40.0
@@ -53,7 +55,7 @@ FAILURE_MODES = ["none", "occlusion", "aggressive merge", "sensor noise", "map a
 FUTURE_SECONDS = 6.0
 DT = FUTURE_SECONDS / FUTURE_STEPS  # 0.5s per step, matching the rest of the codebase
 KEY_TIMES = [2.0, 4.0, 6.0]  # seconds; the 3 adjustable checkpoints
-KEY_INDICES = [int(round(t / DT)) - 1 for t in KEY_TIMES]  # corresponding 0-indexed rows in future_x/y
+KEY_INDICES = [round(t / DT) - 1 for t in KEY_TIMES]  # corresponding 0-indexed rows in future_x/y
 
 
 @st.cache_resource
@@ -139,16 +141,16 @@ def spline_from_keypoints(key_points: list) -> np.ndarray:
     return np.stack([spline_x(canonical_times), spline_y(canonical_times)], axis=-1)
 
 
-def make_plot(row, traj: np.ndarray, logits: np.ndarray, xgb_pred: np.ndarray, map_polylines: list, spline_xy: np.ndarray = None, key_points: list = None):
+def make_plot(row, traj: np.ndarray, logits: np.ndarray, xgb_pred: np.ndarray, map_polylines: list, spline_xy: np.ndarray | None = None, key_points: list | None = None):
     fig = go.Figure()
 
     for poly in map_polylines:
-        fig.add_trace(go.Scatter(x=poly[:, 0], y=poly[:, 1], mode="lines", line=dict(color="lightgray", width=1), hoverinfo="skip", showlegend=False))
+        fig.add_trace(go.Scatter(x=poly[:, 0], y=poly[:, 1], mode="lines", line={"color": "lightgray", "width": 1}, hoverinfo="skip", showlegend=False))
 
     past_x = np.array([row[f"past_x_{i}"] for i in range(PAST_STEPS)])
     past_y = np.array([row[f"past_y_{i}"] for i in range(PAST_STEPS)])
     valid = ~np.isnan(past_x)
-    fig.add_trace(go.Scatter(x=np.r_[past_x[valid], 0], y=np.r_[past_y[valid], 0], mode="lines+markers", line=dict(color="royalblue"), name="past"))
+    fig.add_trace(go.Scatter(x=np.r_[past_x[valid], 0], y=np.r_[past_y[valid], 0], mode="lines+markers", line={"color": "royalblue"}, name="past"))
 
     future_x = np.array([row[f"future_x_{i}"] for i in range(FUTURE_STEPS)])
     future_y = np.array([row[f"future_y_{i}"] for i in range(FUTURE_STEPS)])
@@ -157,39 +159,39 @@ def make_plot(row, traj: np.ndarray, logits: np.ndarray, xgb_pred: np.ndarray, m
     for k in range(traj.shape[0]):
         fig.add_trace(go.Scatter(
             x=np.r_[0, traj[k, :, 0]], y=np.r_[0, traj[k, :, 1]], mode="lines",
-            line=dict(color=f"rgba(255,140,0,{0.15 + 0.85 * float(probs[k]):.3f})", width=2),
+            line={"color": f"rgba(255,140,0,{0.15 + 0.85 * float(probs[k]):.3f})", "width": 2},
             name="transformer modes" if k == 0 else None, showlegend=(k == 0),
         ))
 
-    fig.add_trace(go.Scatter(x=np.r_[0, xgb_pred[:, 0]], y=np.r_[0, xgb_pred[:, 1]], mode="lines", line=dict(color="crimson", width=2, dash="dash"), name="XGBoost"))
+    fig.add_trace(go.Scatter(x=np.r_[0, xgb_pred[:, 0]], y=np.r_[0, xgb_pred[:, 1]], mode="lines", line={"color": "crimson", "width": 2, "dash": "dash"}, name="XGBoost"))
 
     # Ground truth is added AFTER transformer modes / XGBoost (and given a
     # bold, otherwise-unused color) so it draws on top and isn't hidden when
     # a prediction line sits almost exactly on top of it -- with black,
     # drawn earlier, that was silently swallowing the ground truth line in
     # examples where the transformer's prediction closely matched reality.
-    fig.add_trace(go.Scatter(x=np.r_[0, future_x], y=np.r_[0, future_y], mode="lines", line=dict(color="magenta", width=3), name="ground truth"))
+    fig.add_trace(go.Scatter(x=np.r_[0, future_x], y=np.r_[0, future_y], mode="lines", line={"color": "magenta", "width": 3}, name="ground truth"))
 
     if spline_xy is not None:
-        fig.add_trace(go.Scatter(x=np.r_[0, spline_xy[:, 0]], y=np.r_[0, spline_xy[:, 1]], mode="lines", line=dict(color="green", width=3), name="your correction"))
+        fig.add_trace(go.Scatter(x=np.r_[0, spline_xy[:, 0]], y=np.r_[0, spline_xy[:, 1]], mode="lines", line={"color": "green", "width": 3}, name="your correction"))
 
     if key_points is not None:
         fig.add_trace(go.Scatter(
             x=[p[0] for p in key_points], y=[p[1] for p in key_points], mode="markers+text",
-            marker=dict(color="green", size=12, symbol="circle", line=dict(color="white", width=1)),
+            marker={"color": "green", "size": 12, "symbol": "circle", "line": {"color": "white", "width": 1}},
             text=[f"{t:g}s" for t in KEY_TIMES], textposition="top center", name="your key points",
         ))
 
-    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers", marker=dict(color="magenta", size=16, symbol="x", line=dict(width=3, color="magenta")), name="current position"))
+    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers", marker={"color": "magenta", "size": 16, "symbol": "x", "line": {"width": 3, "color": "magenta"}}, name="current position"))
 
     fig.update_layout(
         template="plotly_white",  # explicit light background, independent of Streamlit's theme
         # (dark theme was rendering the black ground-truth line invisible against a near-black plot bg)
         xaxis_title="x (m, agent frame)", yaxis_title="y (m, agent frame, heading = +y)",
-        yaxis=dict(scaleanchor="x", scaleratio=1),
-        title=dict(text=f"{row['scene_name']} | difficulty={row['difficulty']} | uncertainty={row['uncertainty_score']:.2f}", y=0.98),
-        height=650, margin=dict(l=10, r=10, t=60, b=80),
-        legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="center", x=0.5),
+        yaxis={"scaleanchor": "x", "scaleratio": 1},
+        title={"text": f"{row['scene_name']} | difficulty={row['difficulty']} | uncertainty={row['uncertainty_score']:.2f}", "y": 0.98},
+        height=650, margin={"l": 10, "r": 10, "t": 60, "b": 80},
+        legend={"orientation": "h", "yanchor": "top", "y": -0.12, "xanchor": "center", "x": 0.5},
     )
     return fig
 
@@ -239,7 +241,7 @@ def main() -> None:
         + (" — _already reviewed (saving again will overwrite)_" if already_reviewed else "")
     )
 
-    nusc, helper = load_nusc()
+    _nusc, helper = load_nusc()
     model = load_transformer()
     xgb_model = load_xgb()
 

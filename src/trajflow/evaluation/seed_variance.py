@@ -43,6 +43,7 @@ from trajflow.evaluation.evaluate import filter_difficulty, load_split, log_metr
 from trajflow.models import train_lstm as train_lstm_mod
 from trajflow.models import train_lstm_pretrain as train_lstm_pretrain_mod
 from trajflow.models import train_pretrain as train_pretrain_mod
+from trajflow.models import train_transformer_ar_full as train_transformer_ar_full_mod
 from trajflow.models import train_transformer_full as train_transformer_full_mod
 from trajflow.models.finetune import EPOCHS as FINETUNE_EPOCHS
 from trajflow.models.finetune import LR as FINETUNE_LR
@@ -54,9 +55,12 @@ from trajflow.models.finetune_round2 import EPOCHS as ROUND2_EPOCHS
 from trajflow.models.finetune_round2 import LR as ROUND2_LR
 from trajflow.models.finetune_round2 import merge_corrections
 from trajflow.models.lstm import LSTMTrajectoryModel
-from trajflow.models import train_transformer_ar_full as train_transformer_ar_full_mod
 from trajflow.models.train_pretrain import evaluate_on_df, set_seed
-from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.models.transformer import (
+    TrajectoryDataset,
+    TrajectoryTransformer,
+    min_of_k_loss,
+)
 from trajflow.models.transformer_ar import TransformerARModel
 from trajflow.paths import CORRECTIONS_PATH
 

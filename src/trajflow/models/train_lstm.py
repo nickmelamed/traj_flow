@@ -5,7 +5,6 @@ transformer's pretrain-on-easy/fine-tune-on-hard structure. This model is
 a comparison baseline for architecture choice, not part of that lineage.
 """
 
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -46,7 +45,7 @@ def main() -> None:
         for past_seq, context, gt in train_loader:
             optimizer.zero_grad()
             traj, logits = model(past_seq, context)
-            loss, reg, cls = min_of_k_loss(traj, logits, gt)
+            loss, _reg, _cls = min_of_k_loss(traj, logits, gt)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item() * len(gt)
