@@ -710,9 +710,13 @@ mean the data is broken.
   850 (`nuscenes.utils.splits.train` and `val`, 700+150 scenes) should
   therefore need only nuScenes' "Metadata" download, not the ~350 GB of "File
   blobs". `data/download.py`'s module docstring has the instructions and
-  caveats. This has not been tested against the real archive, because fetching
-  it needs an account and license click-through that can't be automated.
-  Preprocessing time should scale roughly linearly with scene count, so expect
+  caveats. A 100-scene pilot on `v1.0-trainval` has been run with the metadata
+  download only. Its preprocessing produced 16,878 train rows (72 scenes),
+  3,300 val rows (10 scenes) and 3,789 test rows (18 scenes), and the flagging
+  and review steps ran on it. The processed data and corrections from the
+  pilot are kept in `backups/scaleup/`, which is gitignored. No pilot results
+  are in the results table, which reports the mini run only, and the full 850
+  scenes have not been run. Preprocessing time should scale roughly linearly with scene count, so expect
   it to run noticeably longer than mini's few minutes at 850 scenes.
   `preprocess.py --max-scenes N` caps the total scene count (deterministically,
   not as a random subsample) for a pilot run before committing to all 850,
