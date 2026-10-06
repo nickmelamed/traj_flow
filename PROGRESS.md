@@ -8,8 +8,8 @@ section is loaded at the start of each session.
 - [x] Agent standards v2.0.0 installed and merged to `main` (PR #1). Hooks,
   protected paths, reviewer agents and six owner-only repo skills are in place.
 - [x] Spec (`docs/SPEC.md`) and decision log (`docs/DECISIONS.md`) reviewed by
-  the owner. Rules 4, 6 and 7 are confirmed. A few lines are still tagged
-  [inferred].
+  the owner. Rules 3, 4, 6 and 7 are confirmed. No lines are tagged
+  [inferred] now.
 - [x] Style cleanup of comments and docs, with no behavior change.
 - [x] Characterization and property tests added (66 tests, fast gate runs them).
 - [x] Mini state restored in the live directories. The scale-up copies are in

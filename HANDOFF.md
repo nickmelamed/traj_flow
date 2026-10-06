@@ -1,19 +1,51 @@
-# Handoff: finishing the agent-standards retrofit
+# Handoff: after the agent-standards retrofit
 
 Written for a fresh Claude Code session. Read this first, then `CLAUDE.md`,
 `PROGRESS.md` and `docs/SPEC.md`.
 
 ## Where things stand
 
-- PR #1 (`chore/agent-standards`) is merged into `main`. The local branch is
-  deleted.
-- The branch adds the agent tooling (standards v2.0.0), rewrites `CLAUDE.md`,
-  adds `docs/SPEC.md` and `docs/DECISIONS.md`, cleans up comments and the
-  README, and adds 34 tests (66 in total). No code behavior changed, and no
-  README or results number changed.
-- The Stop gate runs the style check and `PY=traj/bin/python make test-fast`.
-  Lint, types and the README number check are not in the gate because they
-  do not pass yet.
+- `main` holds everything. PR #1 (agent standards) and PRs #2 to #7 are merged,
+  and all the feature branches are deleted. The only remote branch besides
+  `main` is the old `origin/chore/agent-standards`.
+- `make ci`, `make numbers` and the Stop gate all pass on `main`. The gate now
+  runs the style check, `make lint`, `make typecheck`, `make numbers` and
+  `make test-fast`. There are 77 tests.
+- CI runs `make setup && make ci` on Ubuntu with Python 3.12. It passed on the
+  PR that turned it on, in about 2.5 minutes.
+- The local data is the mini state the README describes (train 2,388, val 701,
+  test 1,626, 124 corrections of which 13 changed a label). The scale-up copies
+  are in `backups/scaleup/` and the mini copies are in `backups/mini/`. Both
+  are gitignored. Do not delete either.
+- The README numbers are traceable. `make numbers` checks them against
+  `results/metrics_comparison.md`, the saved analysis outputs
+  (`results/seed_variance.txt`, `moving_subset.txt`, `regularization_sweep.txt`,
+  `scene_overlay.txt`) and `results/derived_values.txt`.
+  `scripts/derive_values.py` writes the last one from the results table and the
+  seed variance output. Rerun it after any rerun of the analyses.
+- A rerun of the three analyses on the mini state reproduced every value in the
+  results table. The README's "97% of the gap" was wrong and now says 96%, since
+  the table gives 95.7%.
+
+## What changed in the code
+
+- `build_scene_splits` raises a `ValueError` when `val_scenes_from_train` is
+  below 1.
+- `preprocess.py` writes `data/processed/VERSION`, and `paths.active_nuscenes_version()`
+  reads it. The review app, the dashboard and the scene overlay use it instead
+  of hardcoding `v1.0-mini`. A missing marker falls back to mini. The mini
+  restore left no marker, which is fine.
+- `flag_uncertain.main` is split into `load_candidates` and `score_candidates`
+  so rule 2 can be tested. New tests cover rule 1 (written split files share no
+  scene) and rule 2 (flagging reads only the hard TRAIN rows).
+- Ruff and mypy pass. The import blocks in `flag_uncertain.py`, `review_app.py`
+  and `model_registry.py` are fenced with `# isort: off` and `# isort: on`
+  because xgboost must load before torch. Missing stubs are ignored for
+  nuscenes, pandas, plotly, joblib, pyquaternion, scipy, sklearn and tqdm in
+  `pyproject.toml`.
+- The `slow` pytest marker is registered.
+- `trajflow-scene-overlay` now prints the ADE values quoted in the figure
+  captions. The figures themselves did not change.
 
 ## Ground rules for this repo
 
@@ -21,146 +53,54 @@ Written for a fresh Claude Code session. Read this first, then `CLAUDE.md`,
   `python3 -m pytest` fails with collection errors. Use
   `traj/bin/python -m pytest -q`.
 - Protected files need the owner's approval before each edit. The list is in
-  `.claude/protected-paths` and includes `src/trajflow/evaluation/`,
-  `data/preprocess.py`, `hitl/flag_uncertain.py`, `paths.py`,
-  `results/metrics_comparison.md`, `data/SCHEMA.md`, `backups/` and
-  `corrections/`.
+  `.claude/protected-paths`.
 - Never weaken a test or a check to make it pass. Never edit
   `results/metrics_comparison.md` by hand. Rows are written by `log_metrics`.
-- Commits need the owner's go-ahead. When asked, run them with
-  `timeout 40 git commit ...`, since SSH signing once hung. End each message
-  with the `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` line.
-- Ask before pushing, merging, tagging, or changing dependencies.
-- Do not train or evaluate against the current local data. See task 1.
+- Commit only when the owner asks, wrapped in `timeout 40 git commit ...`.
+  Commits worked in this session without hanging. End each message with the
+  `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` line.
+- Ask before pushing, merging, tagging, deleting branches, or changing
+  dependencies, CI or hooks.
+- Do not run `ruff check --fix` over the whole tree. It reorders imports in the
+  files above, which brings back the xgboost and torch hang, and it edits
+  protected files.
+- Do not use `git checkout -- <file>` to undo an experiment on a file that has
+  other uncommitted work. It discards all of it.
+- Do not run `run_pipeline.sh` on the mini state unless the owner asks. It
+  retrains everything and overwrites the mini checkpoints.
+- The auto-mode classifier blocked an edit to `.claude/gate-commands` until the
+  owner asked for it explicitly. Expect the same for other hook and gate files.
 
-## Tasks, in the order I would do them
+## Open items, all for the owner
 
-### 1. Restore the mini state before touching data or results (done)
-
-Local `data/processed/`, `artifacts/flagged.parquet` and `corrections/` come
-from a scale-up run (train 16,878 rows over 72 scenes, 679 flagged, 154
-corrections). The checkpoints are still the mini ones. The README and results
-table describe mini (train 2,388, val 701, test 1,626, 124 corrections of
-which 13 changed a label). Run the `restore-mini-state` skill first. The mini
-copies are in `backups/mini/`, which is gitignored. Do not delete it.
-
-### 2. Confirm the hooks run in a live session
-
-Restart Claude Code, then ask Claude to `cat .env.test`. The read must be
-blocked. Only the scripted smoke test has exercised the hooks so far. While
-building this branch, edits to protected files did not prompt, which suggests
-the hooks were not loaded in that session.
-
-### 3. Fix the `--val-scenes-from-train 0` bug
-
-`build_scene_splits` in `src/trajflow/data/preprocess.py` slices with
-`train_scene_names[-val_scenes_from_train:]`. With 0, `[-0:]` returns the
-whole list, so every train scene becomes val and train is empty. Nothing
-warns. The default is 2, so no reported result is affected.
-
-Write a failing test first (`tests/test_data_scaleup.py` already tests the
-function), then fix it, either by rejecting values below 1 with a clear error
-or by slicing from `len(...) - n`. Ask the owner which. The file is protected.
-
-### 4. Get ruff to pass, then add it to the gate
-
-`make lint` runs `ruff check src tests`. It reports 72 errors:
-
-| Rule | Count | Notes |
-|---|---|---|
-| C408 | 23 | `dict()` and `list()` calls, safe to rewrite |
-| RUF059 | 21 | unused unpacked variables, rename to `_` |
-| I001 | 15 | import sorting, auto-fixable |
-| F401 | 8 | unused imports, auto-fixable |
-| RUF046 | 2 | unnecessary `int()` cast |
-| UP035, F541, RUF013 | 1 each | small |
-
-Run `ruff check --fix` for the 26 safe fixes and review the diff. Check each
-other fix by hand, since some files are protected. Keep this as its own PR so
-the diff stays reviewable. When it passes, add `make lint` to
-`.claude/gate-commands` as `PY=traj/bin/python make lint`.
-
-### 5. Get mypy to pass, then add it to the gate
-
-`make typecheck` runs `mypy src` and reports 72 errors. 47 are
-`import-untyped` (nuscenes, scipy, pandas, tqdm have no stubs), 23 are
-`arg-type`, and 2 are `assignment`. The first group is a configuration fix, for
-example `ignore_missing_imports` for `nuscenes.*` in a `[tool.mypy]` section,
-or installing `pandas-stubs` and `types-tqdm`. Both change `pyproject.toml`
-(dependencies or config), which needs approval. Do the real type errors after
-that. Add `make typecheck` to the gate once it passes.
-
-### 6. Make the README numbers traceable
-
-`make numbers` fails on 20 README numbers. They come from three scripts that
-only print to the terminal. After task 1, run the `repro-mini` skill. It saves
-`trajflow-seed-variance`, `trajflow-moving-subset-analysis` and
-`trajflow-finetune-regularization-sweep` output to `results/*.txt`, which
-`make numbers` already lists as sources. Seed variance retrains models and
-takes about 10 minutes. Some numbers are derived and will still fail, for
-example the per-seed gaps (+0.165, +0.140, +0.210), "97% of the gap closed",
-and the per-scene ADEs in the figure captions. For those, either generate a
-derived-values table or mark the line `numbers: ok` with the owner's
-approval. When `make numbers` passes, add it to the gate.
-
-If the retrained numbers differ from the README (training is seeded but not
-bit-identical), report the differences. Do not edit the results table to
-match.
-
-### 7. Decide what to do with `stash@{0}`
-
-The stash is named "stashing any uncommitted changes before repo cleanup". It
-touches `README.md`, `results/metrics_comparison.md`, `data/SCHEMA.md`,
-`.gitignore`, `preprocess.py`, `paths.py`, `review_app.py`, `dashboard.py`,
-`scene_overlay.py` and `tests/test_data_scaleup.py`. Its README and results
-edits will conflict with the README rewrite. Inspect it read-only
-(`git stash show -p stash@{0}`) and tell the owner whether anything is worth
-porting. Do not apply it blindly.
-
-### 8. Close the test gaps for the rules
-
-`docs/SPEC.md` rules 1 and 2 are only partly tested.
-- Rule 1 (no scene leakage): `test_data_scaleup.py` checks the split function.
-  Nothing checks processed parquet files for scene overlap. A test that loads
-  a small synthetic frame through the extraction path would need nuScenes, so a
-  check on the written parquet (no `scene_name` in two splits) is the cheap
-  option.
-- Rule 2 (HITL uses TRAIN only): `flag_uncertain.main` is not tested. Move the
-  scoring into an importable function, then test that it only reads train rows.
-- Uncovered by design: the Streamlit apps, the training loops, and
-  `preprocess.extract_examples` (needs nuScenes).
-
-### 9. Confirm the draft docs
-
-`docs/SPEC.md` and `docs/DECISIONS.md` are drafts. Ask the owner to confirm
-the lines tagged [inferred] in SPEC.md (rules 4, 6 and 7), and to check two
-details in DECISIONS.md that came from code comments, not from the owner:
-D2's "roughly 55/45" hard/easy split, and D5's "test minADE 0.602 with the
-heading feature". Then drop the "Draft" status lines.
-
-### 10. Smaller items
-
-- Register a `slow` pytest marker in `pyproject.toml` (`make test-fast` uses
-  `-m "not slow"`, which warns about the unknown marker if one is used).
-- Once `make ci` passes, enable the commented "Project checks" step in
-  `.github/workflows/agent-checks.yml`.
-- Decide whether to commit the mini `corrections.parquet`. `corrections/` is
-  gitignored, so the labels behind fine-tuned-v2 cannot be reproduced from the
-  repo. Also consider data checksums for processed data and checkpoints.
-- The README rewrite was mechanical plus a manual pass. The owner should read
-  it once for tone.
-- After PR #1 merges, delete the branch and rebase any follow-up work on
-  `main`.
+1. Confirm the hooks run in a live session. Restart Claude Code, then ask it to
+   `cat .env.test`. The read must be blocked. Only the scripted smoke test has
+   exercised the hooks so far.
+2. Decide whether to commit the mini `corrections.parquet`. `corrections/` is
+   gitignored, so the labels behind fine-tuned-v2 cannot be reproduced from the
+   repo. Also consider checksums for processed data and checkpoints.
+3. Decide whether the README should say that a real trainval pilot run
+   happened. It currently says the trainval path was never tested against the
+   real archive. The scale-up data in `backups/scaleup/` suggests a pilot ran.
+4. Read the README once for tone.
+5. Delete `origin/chore/agent-standards` if it is no longer needed.
+6. Optionally tidy the remaining `[inferred]` tags in `docs/SPEC.md` (rule 3,
+   one sentence about the round-1 regression, and the "Known gaps" heading).
+7. The old stash is dropped. Its diff is saved at
+   `~/Desktop/GitHub/traj_flow-stash-b2e4efe.patch`, outside the repo. It holds
+   the pilot paragraph from item 3, scale-up results rows and schema text that
+   should not come back.
 
 ## Useful commands
 
 ```bash
-traj/bin/python -m pytest -q                       # 66 tests, about 3s
-python3 scripts/agent/check_style.py .             # style check, whole repo
+traj/bin/python -m pytest -q                       # 77 tests, about 4s
+make ci PY=traj/bin/python                         # lint, types, tests, style
+make numbers PY=traj/bin/python                    # README numbers vs sources
+python3 scripts/derive_values.py                   # rewrite results/derived_values.txt
 python3 scripts/agent/check_style.py --changed .   # style check, changed lines
 python3 scripts/agent/smoke_test.py                # hook behavior, scripted
 echo '{}' | python3 scripts/agent/stop_gate.py     # run the Stop gate by hand
-make numbers                                       # README numbers vs sources
 ```
 
 ## Things that surprised me
@@ -174,3 +114,10 @@ make numbers                                       # README numbers vs sources
   that file lives in `preprocess.py`, so edit both together.
 - Several modules need xgboost imported before torch, with `KMP_DUPLICATE_LIB_OK`
   and `OMP_NUM_THREADS` set first. Keep that import order.
+- The seed variance analysis retrains models and takes about 10 minutes. It and
+  the other two analyses call `log_metrics`, so rerunning them rewrites rows in
+  the results table. The values come out the same, but the row order can move.
+- The `test` job in CI took between 2 and 6.5 minutes across runs. A slow run is
+  not necessarily a hung one.
+- In zsh, a variable holding several branch names is not split into words in a
+  `for` loop. Write the names out.

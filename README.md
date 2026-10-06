@@ -175,7 +175,9 @@ strawman.
 
 ## Methodology
 
-**Phase 2, classical baselines.** Constant velocity extrapolates the
+### Phase 2, classical baselines
+
+Constant velocity extrapolates the
 final observed velocity linearly. Constant acceleration extends this with
 an acceleration vector estimated from a double finite-difference of the
 two most recent past positions, then extrapolates `pos(t) = v*t +
@@ -183,7 +185,9 @@ two most recent past positions, then extrapolates `pos(t) = v*t +
 flattened future waypoint vector from engineered features, trained on the
 full train split.
 
-**An LSTM comparison architecture** (`src/trajflow/models/lstm.py`). An LSTM
+### LSTM comparison architecture
+
+The model is in `src/trajflow/models/lstm.py`. An LSTM
 encodes 2s of past motion, fused with the same context vector the
 transformer uses, and decodes K=6 candidate futures autoregressively. Each
 `LSTMCell` step predicts one future position delta and feeds it back in as the
@@ -198,8 +202,10 @@ separate confound. `src/trajflow/models/train_transformer_full.py` addresses
 it by training the pretrained and fine-tuned lineage's architecture the
 LSTM's way. See Results.
 
-**Isolating encoder vs. decoder** (`src/trajflow/models/transformer_ar.py` +
-`train_transformer_ar_full.py`). The full-split controlled comparison
+### Encoder and decoder ablation
+
+The code is in `src/trajflow/models/transformer_ar.py` and
+`train_transformer_ar_full.py`. The full-split controlled comparison
 above still bundles two architectural differences into "the LSTM wins".
 One is a recurrent encoder (LSTM) versus an attention encoder (transformer).
 The other is an autoregressive decoder (one step conditions on the last)
@@ -217,15 +223,19 @@ cleanly:
 
 See Results for which factor actually explains the gap.
 
-**LSTM through the transformer's own lineage** (`train_lstm_pretrain.py` +
-`finetune_lstm.py` + `finetune_lstm_round2.py`): mirrors Phases 3/4/6
+### LSTM through the transformer's lineage
+
+The scripts are `train_lstm_pretrain.py`, `finetune_lstm.py` and
+`finetune_lstm_round2.py`. They mirror Phases 3/4/6
 below exactly (same epochs/LR/loss/model-selection criterion, same
 corrections file for round 2) but for `LSTMTrajectoryModel` instead of
 `TrajectoryTransformer`. Does the LSTM show the same scene-specific
 overfitting the transformer shows when fine-tuned on only 6 scenes, or is
 that a transformer-specific weakness? See Results.
 
-**Phase 3, pretrain.** A compact self-attention encoder over 2s of past
+### Phase 3, pretrain
+
+A compact self-attention encoder over 2s of past
 motion, fused with an MLP-encoded context vector (kinematics + 3-nearest-
 neighbor features), decoded into K=6 candidate futures + mode
 probabilities via a second self-attention block. Trained on the **easy**
@@ -233,11 +243,15 @@ split only with a min-of-K displacement + cross-entropy loss (standard
 multi-hypothesis trajectory prediction loss). Model-selected by best
 val-set minADE.
 
-**Phase 4, fine-tune (round 1).** Continues from the pretrained
+### Phase 4, fine-tune (round 1)
+
+Continues from the pretrained
 checkpoint, fine-tuned on the **hard** split with a lower LR and fewer
 epochs, producing `fine-tuned-v1`.
 
-**Phase 5, HITL flagging + review.** `src/trajflow/hitl/flag_uncertain.py` scores the
+### Phase 5, HITL flagging and review
+
+`src/trajflow/hitl/flag_uncertain.py` scores the
 hard-scene **training** examples, not test. Flagging test examples would mean
 training on corrected test labels and then evaluating on those same
 instances, which would invalidate the before/after comparison. The score
@@ -248,12 +262,16 @@ modes, and the XGBoost prediction. The reviewer accepts, corrects (via 3
 adjustable key waypoints auto-smoothed into the full path, with a live
 preview), or tags a failure mode.
 
-**Phase 6, fine-tune (round 2).** The reviewed corrections are merged
+### Phase 6, fine-tune (round 2)
+
+The reviewed corrections are merged
 into the hard training set (13 of 1,238 labels actually changed. Most
 flagged examples were judged fine as-is) and fine-tuning continues from
 `fine-tuned-v1`, producing `fine-tuned-v2`.
 
-**Ablation control for Phase 6.** `fine-tuned-v2` differs from
+### Ablation control for Phase 6
+
+`fine-tuned-v2` differs from
 `fine-tuned-v1` in two confounded ways: it has 13 corrected labels *and*
 60 more epochs of fine-tuning. Running
 `src/trajflow/models/finetune_round2.py --ablation-no-corrections` reruns the
@@ -263,10 +281,11 @@ differ only in whether the 13 labels are corrected. Comparing it
 against `fine-tuned-v2` isolates whether the corrections themselves did
 anything, versus just training longer. See Results.
 
-**Can regularization fix the round-1 regression?**
-(`src/trajflow/models/finetune_regularization_sweep.py`) Fine-tuning on 6
-scenes was documented as overfitting-prone. This section tests whether the
-problem is fixable. It sweeps weight decay (Adam,
+### Regularization sweep
+
+The script is `src/trajflow/models/finetune_regularization_sweep.py`.
+Fine-tuning on 6 scenes was documented as overfitting-prone, and the sweep
+tests whether the round-1 regression is fixable. It sweeps weight decay (Adam,
 `{0, 1e-4, 1e-3}`) x dropout (`{0.1 (finetune.py's actual value), 0.3}`),
 otherwise reusing finetune.py's exact recipe (same 60 epochs, LR, seed,
 starting checkpoint) via `evaluation/seed_variance.py`'s `train_loop`, so
@@ -294,7 +313,7 @@ difficulties):
 Full table with val-split rows and easy/hard breakdowns:
 [`results/metrics_comparison.md`](results/metrics_comparison.md).
 
-**The LSTM is the best model on every metric by a wide margin**, with a
+The LSTM is the best model on every metric by a wide margin, with a
 caveat about what is being compared (see below). First, the other results:
 
 - Constant acceleration substantially underperforms constant velocity
@@ -347,7 +366,7 @@ split, one pass, identical loss, epochs and batch size) to separate them:
 | **Transformer, full-split (controlled)** | **0.750** | **4.477** |
 | LSTM (baseline) | 0.267 | 2.738 |
 
-Training regime mattered less than I expected. Giving the transformer the
+Training regime mattered less than expected. Giving the transformer the
 same full-split training as the LSTM barely moved the aggregate number
 (0.758 → 0.750) and only partly closed the moving-vehicle gap (5.791 → 4.477,
 still nearly double the LSTM's 2.738). Architecture accounts for most of the
@@ -378,8 +397,8 @@ Swapping only the decoder, with the same encoder and data, took test/all
 minADE from 0.750 to 0.287, closing 96% of the gap to the LSTM's 0.267. It did
 so with *fewer* parameters than the original transformer (90,755 versus
 108,249, since the autoregressive decoder head is smaller than the parallel
-one), so extra capacity does not explain it. **Decoder style is the dominant
-factor.** On the moving-vehicle-only numbers the picture is more nuanced.
+one), so extra capacity does not explain it. Decoder style is the dominant
+factor. On the moving-vehicle-only numbers the picture is more nuanced.
 Transformer-AR (3.529) closes about 55% of the gap between the full-split
 transformer (4.477) and the LSTM (2.738). That is most of the gap but not all
 of it, so the LSTM's recurrent *encoder* may contribute a little on moving
@@ -402,7 +421,7 @@ lineage (see Methodology), or is that a transformer-specific weakness?
 | LSTM, fine-tuned-v1 (hard) | 0.278 (**improved**) | 0.307 (**improved**) | 3.163 (**improved**) |
 | LSTM, fine-tuned-v2 (post-HITL) | 0.279 (flat) | 0.305 (flat/slight improvement) | 3.219 (slight regression) |
 
-**No, the LSTM does not share the transformer's overfitting fragility.**
+No, the LSTM does not share the transformer's overfitting fragility.
 Fine-tuning *improves* the LSTM on every headline metric, while the
 transformer regresses on the same 6 scenes with the same recipe. This doesn't
 fully explain *why*. A recurrent decoder may simply have a more favorable loss
@@ -522,11 +541,14 @@ across those resamples. Both are logged in each row's Notes column in
 
 Two conclusions live in this table, and they should not be confused:
 
-- **That learned models beat constant velocity on moving vehicles is
-  robust.** Every model except Constant Acceleration beats CV in at least
-  97.8% of paired bootstrap resamples (ten of twelve beat it in 100%), and
-  the CIs barely overlap CV's for the transformer, LSTM and XGBoost rows. The
-  moving-vehicle subset section above rests on this claim.
+- That learned models beat constant velocity on moving vehicles is robust.
+  Every model except Constant Acceleration beats CV in at least 97.8% of
+  paired bootstrap resamples (ten of twelve beat it in 100%). The CIs of the
+  LSTM rows, Transformer-AR and the full-split transformer sit entirely below
+  CV's [5.44, 7.88]. The CIs of XGBoost and the other transformer rows overlap
+  it, so for those rows the claim rests on the paired bootstrap and not on
+  separated intervals. The moving-vehicle subset section above rests on this
+  claim.
 - Ranking within a lineage does not hold up at this sample size. For example,
   the transformer's pretrained (5.791), fine-tuned-v1 (5.493), fine-tuned-v2
   (5.434) and fine-tuned-v2-control (5.368) rows have heavily overlapping 95%
@@ -668,7 +690,7 @@ an ambiguous intersection turn), and the labels were fine. Telling these cases
 apart is what the review step is for. A model disagreeing with itself does not
 mean the data is broken.
 
-## Limitations & what I'd do with more compute/data
+## Limitations and next steps
 
 - nuScenes mini is tiny (10 scenes). Train, val and test come from disjoint
   scenes, so scene-to-scene variance dominates. The constant-velocity
@@ -688,9 +710,13 @@ mean the data is broken.
   850 (`nuscenes.utils.splits.train` and `val`, 700+150 scenes) should
   therefore need only nuScenes' "Metadata" download, not the ~350 GB of "File
   blobs". `data/download.py`'s module docstring has the instructions and
-  caveats. This has not been tested against the real archive, because fetching
-  it needs an account and license click-through that can't be automated.
-  Preprocessing time should scale roughly linearly with scene count, so expect
+  caveats. A 100-scene pilot on `v1.0-trainval` has been run with the metadata
+  download only. Its preprocessing produced 16,878 train rows (72 scenes),
+  3,300 val rows (10 scenes) and 3,789 test rows (18 scenes), and the flagging
+  and review steps ran on it. The processed data and corrections from the
+  pilot are kept in `backups/scaleup/`, which is gitignored. No pilot results
+  are in the results table, which reports the mini run only, and the full 850
+  scenes have not been run. Preprocessing time should scale roughly linearly with scene count, so expect
   it to run noticeably longer than mini's few minutes at 850 scenes.
   `preprocess.py --max-scenes N` caps the total scene count (deterministically,
   not as a random subsample) for a pilot run before committing to all 850,
@@ -705,30 +731,21 @@ mean the data is broken.
   stratified by genuinely moving agents (or a training and eval set
   rebalanced toward them), since that is where prediction quality matters for
   planning.
-- Fine-tuning on 6 scenes overfits for the transformer. This is
-  architecture-specific and partly fixable. The LSTM put through the identical
-  fine-tuning recipe on the same 6 scenes does *not* regress (see "Does the
-  LSTM overfit the same way?" in Results), so "small-data fine-tuning
-  overfits" is not a safe general claim, at least at this effect size. For the
-  transformer, a weight-decay sweep (`finetune_regularization_sweep.py`)
-  recovered about two-thirds of the regression (see "Can regularization fix
-  the fine-tuning regression?" in Results) without eliminating it. Next steps
-  would be early stopping keyed to a larger, more representative validation
-  set, or more training scenes. Early stopping by epoch count alone would not
-  help, since the existing best-checkpoint selection already captures that
-  effect (see the sweep script's docstring).
-- The controlled LSTM-versus-transformer experiment (see Results) isolated
-  training regime. The Transformer-AR ablation (see "Isolating encoder vs.
-  decoder") isolated decoder style. Together they show that decoder style
-  (autoregressive vs. parallel), and not encoder type (attention vs.
-  recurrent) or training regime, explains most of the LSTM's advantage. Not
-  isolated are each architecture's own hyperparameters (d_model, layer count,
-  hidden size and so on), which were held fixed and never tuned for any of the
-  three models. A fuller ablation would vary them to rule out one architecture
-  simply getting a better parameter count for this data size, and would test
-  why autoregressive decoding helps this much. My working guess is error
-  accumulation in the loss signal during training and not only at inference,
-  which this project does not test directly.
+- Fine-tuning on 6 scenes regressed the transformer but not the LSTM, and the
+  regularization sweep recovered part of the transformer's regression (see
+  "Does the LSTM overfit the same way?" and "Can regularization fix the
+  fine-tuning regression?" in Results). The next steps would be early stopping
+  keyed to a larger, more representative validation set, or more training
+  scenes. Early stopping by epoch count alone would not help, since the
+  existing best-checkpoint selection already captures that effect (see the
+  sweep script's docstring).
+- Each architecture's own hyperparameters (d_model, layer count, hidden size
+  and so on) were held fixed and never tuned for any of the three models. A
+  fuller ablation would vary them to rule out one architecture simply getting
+  a better parameter count for this data size. It would also test why
+  autoregressive decoding helps this much. One guess is error accumulation in
+  the loss signal during training and not only at inference, which this
+  project does not test directly.
 - The transformer only sees 3 nearest neighbors and no map-vector encoding.
   Map context is used for the easy/hard split and the HITL viewer, not as a
   model input. A production model would encode the full local lane graph (for
@@ -775,6 +792,8 @@ src/trajflow/
   paths.py       single source of truth for every data/artifact directory below
 
 data/            nuScenes data (gitignored) + processed/ parquet and VERSION marker (gitignored) + SCHEMA.md
+                 + CHECKSUMS.sha256 (sha256 of the mini processed data, flagged rows, corrections and
+                 checkpoints behind the reported results, check with `shasum -a 256 -c data/CHECKSUMS.sha256`)
 checkpoints/     trained model weights (gitignored, regenerable)
 artifacts/       HITL flagging output, e.g. flagged.parquet (gitignored)
 corrections/     HITL reviewer output (gitignored, personal review data)

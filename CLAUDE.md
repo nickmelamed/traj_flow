@@ -29,9 +29,11 @@ reasons are in docs/DECISIONS.md.
 6. Do not add absolute global heading as a feature in a learned model. It
    leaks scene orientation (D5 in docs/DECISIONS.md).
 7. Reported results are the mini run. Do not overwrite mini artifacts with a
-   scale-up run. The local `data/processed/`, `corrections/` and
-   `artifacts/flagged.parquet` currently come from a scale-up run, and the
-   mini copies are in `backups/mini/`. Do not train or evaluate against a mix.
+   scale-up run. The local `data/processed/`, `corrections/`,
+   `artifacts/flagged.parquet` and `checkpoints/` are the mini state, as
+   `data/CHECKSUMS.sha256` verifies. The mini copies are also in
+   `backups/mini/` and the scale-up copies are in `backups/scaleup/`. Do not
+   train or evaluate against a mix.
 8. Never weaken a test, lint rule, or check to make it pass.
 9. Ask before changing anything in `.claude/protected-paths`, the evaluation
    design, dependencies, CI, or hooks.
@@ -39,7 +41,7 @@ reasons are in docs/DECISIONS.md.
 ## Commands
 
 ```bash
-python -m pytest -q                         # 66 tests, about 3s, synthetic data
+python -m pytest -q                         # 77 tests, about 4s, synthetic data
 python3 scripts/agent/check_style.py .      # style check (the Stop-hook gate)
 make agent-check                            # lint, types, fast tests, style
 make numbers                                # README numbers vs generated sources
