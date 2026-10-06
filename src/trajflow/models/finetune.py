@@ -10,13 +10,16 @@ for comparability against the other rows in the table.
 
 import sys
 
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
 from trajflow.evaluation.evaluate import filter_difficulty, load_split, log_metrics
 from trajflow.models.train_pretrain import evaluate_on_df, set_seed
-from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer, min_of_k_loss
+from trajflow.models.transformer import (
+    TrajectoryDataset,
+    TrajectoryTransformer,
+    min_of_k_loss,
+)
 from trajflow.paths import CHECKPOINTS_DIR
 
 PRETRAINED_CHECKPOINT = CHECKPOINTS_DIR / "pretrained.pt"
@@ -57,7 +60,7 @@ def main() -> None:
         for past_seq, context, gt in train_loader:
             optimizer.zero_grad()
             traj, logits = model(past_seq, context)
-            loss, reg, cls = min_of_k_loss(traj, logits, gt)
+            loss, _reg, _cls = min_of_k_loss(traj, logits, gt)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item() * len(gt)

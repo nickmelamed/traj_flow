@@ -31,6 +31,7 @@ import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
+# isort: off
 import joblib
 import numpy as np
 import pandas as pd
@@ -49,6 +50,7 @@ from torch.utils.data import DataLoader
 
 from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer
 from trajflow.paths import CHECKPOINTS_DIR, FLAGGED_PATH
+# isort: on
 
 TRANSFORMER_CHECKPOINT = CHECKPOINTS_DIR / "finetuned_v1.pt"
 OUTPUT_PATH = FLAGGED_PATH

@@ -8,7 +8,6 @@ directly rather than re-implementing it), but for the LSTM.
 
 import sys
 
-import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
@@ -63,7 +62,7 @@ def main() -> None:
         for past_seq, context, gt in train_loader:
             optimizer.zero_grad()
             traj, logits = model(past_seq, context)
-            loss, reg, cls = min_of_k_loss(traj, logits, gt)
+            loss, _reg, _cls = min_of_k_loss(traj, logits, gt)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item() * len(gt)

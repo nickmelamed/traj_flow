@@ -187,8 +187,8 @@ def extract_archive(archive_path: Path, dest: Path) -> None:
 
 
 def verify_with_devkit(root: Path, version: str) -> None:
-    from nuscenes.nuscenes import NuScenes
     from nuscenes.map_expansion.map_api import NuScenesMap
+    from nuscenes.nuscenes import NuScenes
 
     print(f"Loading NuScenes(version='{version}', dataroot='{root}') ...")
     nusc = NuScenes(version=version, dataroot=str(root), verbose=True)

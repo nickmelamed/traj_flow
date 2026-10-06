@@ -10,7 +10,12 @@ actually buy us.
 import numpy as np
 import pandas as pd
 
-from trajflow.evaluation.evaluate import filter_difficulty, future_xy, load_split, log_metrics
+from trajflow.evaluation.evaluate import (
+    filter_difficulty,
+    future_xy,
+    load_split,
+    log_metrics,
+)
 from trajflow.evaluation.metrics import batch_metrics
 
 DT = 0.5  # seconds between timesteps (2 Hz)
