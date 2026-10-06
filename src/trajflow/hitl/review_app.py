@@ -45,7 +45,7 @@ from nuscenes.prediction.helper import convert_global_coords_to_local
 
 from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
 from trajflow.models.transformer import TrajectoryDataset, TrajectoryTransformer
-from trajflow.paths import CHECKPOINTS_DIR, CORRECTIONS_PATH, FLAGGED_PATH
+from trajflow.paths import CHECKPOINTS_DIR, CORRECTIONS_PATH, FLAGGED_PATH, active_nuscenes_version
 
 TRANSFORMER_CHECKPOINT = CHECKPOINTS_DIR / "finetuned_v1.pt"
 MAP_RADIUS = 40.0
@@ -58,7 +58,8 @@ KEY_INDICES = [int(round(t / DT)) - 1 for t in KEY_TIMES]  # corresponding 0-ind
 
 @st.cache_resource
 def load_nusc():
-    nusc = NuScenes(version="v1.0-mini", dataroot=str(DEFAULT_DATAROOT), verbose=False)
+    # Tokens in the processed rows only exist in the version they were built from.
+    nusc = NuScenes(version=active_nuscenes_version(), dataroot=str(DEFAULT_DATAROOT), verbose=False)
     helper = PredictHelper(nusc)
     return nusc, helper
 

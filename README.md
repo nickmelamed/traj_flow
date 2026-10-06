@@ -695,6 +695,11 @@ mean the data is broken.
   `preprocess.py --max-scenes N` caps the total scene count (deterministically,
   not as a random subsample) for a pilot run before committing to all 850,
   for example `--max-scenes 100 --val-scenes-from-train 10`.
+  `preprocess.py` also writes the version it was run with to
+  `data/processed/VERSION`. The review app, the dashboard and the scene overlay
+  read it through `paths.active_nuscenes_version()`, because tokens in
+  processed rows exist only in the matching nuScenes index. Without the marker
+  they fall back to `v1.0-mini`.
 - The dataset is dominated by near-stationary vehicles, which is why constant
   velocity is such a strong baseline. A production system would want metrics
   stratified by genuinely moving agents (or a training and eval set
@@ -769,7 +774,7 @@ src/trajflow/
                  Scene Browser / Per-Scene tabs)
   paths.py       single source of truth for every data/artifact directory below
 
-data/            nuScenes mini (gitignored) + processed/ parquet (gitignored) + SCHEMA.md
+data/            nuScenes data (gitignored) + processed/ parquet and VERSION marker (gitignored) + SCHEMA.md
 checkpoints/     trained model weights (gitignored, regenerable)
 artifacts/       HITL flagging output, e.g. flagged.parquet (gitignored)
 corrections/     HITL reviewer output (gitignored, personal review data)

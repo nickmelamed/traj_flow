@@ -1,5 +1,6 @@
 from trajflow.data.download import _required_subdirs
 from trajflow.data.preprocess import build_scene_splits
+from trajflow.paths import active_nuscenes_version
 
 
 def test_build_scene_splits_uses_mini_lists_by_default():
@@ -51,3 +52,21 @@ def test_required_subdirs_only_requires_samples_sweeps_for_mini():
     assert "samples" in mini_dirs and "sweeps" in mini_dirs
     assert "samples" not in trainval_dirs and "sweeps" not in trainval_dirs
     assert "maps" in trainval_dirs and "v1.0-trainval" in trainval_dirs
+
+
+def test_active_nuscenes_version_reads_marker_file(tmp_path, monkeypatch):
+    """Check that the version comes from the marker file, not a constant."""
+    import trajflow.paths as paths_mod
+
+    marker = tmp_path / "VERSION"
+    monkeypatch.setattr(paths_mod, "PROCESSED_VERSION_PATH", marker)
+
+    marker.write_text("v1.0-trainval")
+    assert paths_mod.active_nuscenes_version() == "v1.0-trainval"
+
+
+def test_active_nuscenes_version_falls_back_to_mini_when_marker_missing(tmp_path, monkeypatch):
+    import trajflow.paths as paths_mod
+
+    monkeypatch.setattr(paths_mod, "PROCESSED_VERSION_PATH", tmp_path / "does-not-exist")
+    assert paths_mod.active_nuscenes_version() == "v1.0-mini"

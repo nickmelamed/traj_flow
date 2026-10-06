@@ -44,6 +44,7 @@ from nuscenes.prediction.helper import convert_global_coords_to_local
 
 from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
 from trajflow.paths import RESULTS_PATH as METRICS_PATH
+from trajflow.paths import active_nuscenes_version
 
 MAP_RADIUS = 40.0
 NUMERIC_COLS = ["minADE (m)", "minFDE (m)", "Miss Rate @2m"]
@@ -79,7 +80,8 @@ def get_predict_fn(model_key: str):
 
 @st.cache_resource
 def load_nusc():
-    nusc = NuScenes(version="v1.0-mini", dataroot=str(DEFAULT_DATAROOT), verbose=False)
+    # Tokens in the processed rows only exist in the version they were built from.
+    nusc = NuScenes(version=active_nuscenes_version(), dataroot=str(DEFAULT_DATAROOT), verbose=False)
     helper = PredictHelper(nusc)
     return nusc, helper
 

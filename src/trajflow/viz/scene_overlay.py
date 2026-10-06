@@ -50,6 +50,7 @@ from nuscenes.prediction import PredictHelper
 from nuscenes.prediction.helper import convert_global_coords_to_local
 
 from trajflow.paths import FIGURES_DIR as OUTPUT_DIR
+from trajflow.paths import active_nuscenes_version
 
 MAP_RADIUS = 40.0
 
@@ -136,7 +137,8 @@ def plot_example(row, model_lines: list, map_cache: dict, helper: PredictHelper,
 
 
 def main() -> None:
-    nusc = NuScenes(version="v1.0-mini", dataroot=str(DEFAULT_DATAROOT), verbose=False)
+    # Tokens in the processed rows only exist in the version they were built from.
+    nusc = NuScenes(version=active_nuscenes_version(), dataroot=str(DEFAULT_DATAROOT), verbose=False)
     helper = PredictHelper(nusc)
 
     test_df = load_split("test").reset_index(drop=True)
