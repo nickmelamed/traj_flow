@@ -84,6 +84,10 @@ def build_scene_splits(val_scenes_from_train: int, version: str = "v1.0-mini", m
     `split_of_scene.get(scene_name) is None -> skip` check filters their
     samples out before any expensive PredictHelper/map work runs on them.
     """
+    # A slice like [-0:] returns the whole list, which would empty TRAIN.
+    if val_scenes_from_train < 1:
+        raise ValueError(f"val_scenes_from_train must be at least 1, got {val_scenes_from_train}")
+
     official_train, official_test = (
         (nuscenes_splits.mini_train, nuscenes_splits.mini_val)
         if version == "v1.0-mini"
