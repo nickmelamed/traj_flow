@@ -792,6 +792,8 @@ checkpoints/     trained model weights (gitignored, regenerable)
 artifacts/       HITL flagging output, e.g. flagged.parquet (gitignored)
 corrections/     HITL reviewer output (gitignored, personal review data)
 results/         metrics_comparison.md + figures/
+                 + CHECKSUMS.sha256 (sha256 of the mini processed data, flagged rows, corrections and
+                 checkpoints behind the reported results, check with `shasum -a 256 -c data/CHECKSUMS.sha256`)
 ```
 
 ## License
