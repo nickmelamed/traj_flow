@@ -12,7 +12,12 @@ import pandas as pd
 import pytest
 import torch
 
-from trajflow.data.preprocess import DENSITY_THRESHOLD, FUTURE_STEPS, PAST_STEPS, classify_difficulty
+from trajflow.data.preprocess import (
+    DENSITY_THRESHOLD,
+    FUTURE_STEPS,
+    PAST_STEPS,
+    classify_difficulty,
+)
 from trajflow.evaluation.evaluate import filter_difficulty, future_xy
 from trajflow.evaluation.metrics import batch_metrics
 from trajflow.evaluation.moving_subset_analysis import bootstrap_ci, per_example_min_ade
