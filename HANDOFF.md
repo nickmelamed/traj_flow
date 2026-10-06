@@ -5,8 +5,8 @@ Written for a fresh Claude Code session. Read this first, then `CLAUDE.md`,
 
 ## Where things stand
 
-- Branch `chore/agent-standards` is pushed. PR #1 is open against `main`.
-  Both CI jobs passed (`test`, `agent-checks`). It is not merged.
+- PR #1 (`chore/agent-standards`) is merged into `main`. The local branch is
+  deleted.
 - The branch adds the agent tooling (standards v2.0.0), rewrites `CLAUDE.md`,
   adds `docs/SPEC.md` and `docs/DECISIONS.md`, cleans up comments and the
   README, and adds 34 tests (66 in total). No code behavior changed, and no
@@ -35,7 +35,7 @@ Written for a fresh Claude Code session. Read this first, then `CLAUDE.md`,
 
 ## Tasks, in the order I would do them
 
-### 1. Restore the mini state before touching data or results
+### 1. Restore the mini state before touching data or results (done)
 
 Local `data/processed/`, `artifacts/flagged.parquet` and `corrections/` come
 from a scale-up run (train 16,878 rows over 72 scenes, 679 flagged, 154
