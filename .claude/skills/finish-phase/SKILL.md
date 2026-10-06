@@ -19,7 +19,6 @@ Close out the current phase or feature branch.
 6. Commit the fixes as atomic Conventional Commits.
 7. List any procedure that was repeated during this phase and should become
    a skill, and draft it for the owner to approve.
-8. Give the owner a short summary covering what was built, the commits, any
-   decisions logged, anything the reviewers raised that was left open, and
-   the evidence that checks pass.
+8. Give the owner a short summary: what was built, the commits, decisions
+   logged, open reviewer items, and the check output.
 9. Ask before pushing or opening the pull request.

@@ -1,12 +1,18 @@
 # TrajFlow spec
 
-Status: DRAFT. Written from the code (as of commit 39cea0f) plus the owner's
-interview answers. Lines tagged **[inferred]** come from reading the code and
-have not been confirmed. Lines tagged **[confirmed]** come from the owner.
-Untagged lines are directly observable in the code.
+Status: draft. Lines tagged **[inferred]** come from the code and are
+unconfirmed. Lines tagged **[confirmed]** come from the owner. Untagged lines
+are visible in the code.
 
-The section numbers 0–7 follow the original build spec that CLAUDE.md used to
-hold, so existing references ("Phase 4", "Phase 6") still resolve.
+Sections 0 to 7 match the original phase plan, so references such as
+"Phase 4" still resolve.
+
+## Definition of done
+
+All 7 phases are complete, with a single `results/metrics_comparison.md` table
+showing baseline, pretrained, fine-tuned-v1 and fine-tuned-v2 (post-HITL), and
+a README that reads as a coherent portfolio piece to a technical reviewer who
+has never seen the project.
 
 ## Summary [confirmed]
 
@@ -24,7 +30,7 @@ measured results, including negative ones.
    name. No scene contributes samples to more than one split. TEST is the
    official nuScenes `mini_val` list (`build_scene_splits` in
    `data/preprocess.py`).
-2. **Corrections never touch test** [confirmed, and code and README agree it is TRAIN-only]. HITL flagging and review run on
+2. **Corrections never touch test** [confirmed]. HITL flagging and review run on
    hard-scene TRAIN examples only (`hitl/flag_uncertain.py`). Corrected labels
    must never appear in any split used for final evaluation.
 3. **Report as measured** [inferred from CLAUDE.md "Do NOT" section and README].
@@ -50,22 +56,24 @@ measured results, including negative ones.
 - **Easy/hard split counts and parameter counts** [confirmed]. For example
   "108k-parameter transformer", "41k-parameter LSTM", "124 of 1,238 flagged",
   "13 labels changed", "63/1626 moving test examples".
-- Not selected as claims to enforce: bootstrap CIs and seed variance as a
-  separate check, figures matching tables. These are still reported in the
-  README, so treat as [inferred] sources of drift.
+- Bootstrap CIs, seed variance and figure/table agreement are not enforced as
+  claims, but they appear in the README and can drift.
 
 ## Fast checks [confirmed]
 
-- Tests: `python -m pytest -q` (32 tests, about 7s, all on synthetic data).
-- Lint: ruff (to be added as a dev dependency, needs owner approval).
-- Types: mypy (to be added as a dev dependency, likely noisy on torch code).
+- Tests: `python -m pytest -q` (66 tests, about 3s, all on synthetic data).
+- Lint: `make lint` (ruff). It is in the `dev` extra but does not pass yet.
+- Types: `make typecheck` (mypy). It is in the `dev` extra but does not pass yet.
 - Style: `python3 scripts/agent/check_style.py`.
 
 ## Phase 0. Environment and scaffold
 
 Installable package `trajflow` under `src/trajflow/` (PEP 621
 `pyproject.toml`, pinned dependencies, Python >= 3.10). 21 `trajflow-*`
-console scripts. Paths come from `trajflow/paths.py`. CI runs pytest only.
+console scripts. Paths come from `trajflow/paths.py`. CI runs pytest
+(`ci.yml`) and the agent checks (`agent-checks.yml`).
+
+Acceptance: `pip install -e .` runs clean and the structure matches this spec.
 
 ## Phase 1. Data acquisition and preprocessing
 
@@ -84,10 +92,12 @@ console scripts. Paths come from `trajflow/paths.py`. CI runs pytest only.
   official train/val lists, with `--val-scenes-from-train` and `--max-scenes`.
 - Output: `data/processed/{train,val,test}.parquet` (gitignored, regenerable).
 
-Scope: the original spec said mini only. The code now supports trainval
+Scope: reported results are mini. The code also supports trainval
 (`--version v1.0-trainval`) and `data/nuscenes/v1.0-trainval` metadata is
-present locally. [inferred] The scale-up is infrastructure only. Reported
-results are still mini. Confirm.
+present locally. [confirmed] The scale-up is infrastructure only.
+
+Acceptance: the processed dataset exists with a documented schema and the
+easy/hard split counts are logged.
 
 ## Phase 2. Classical baselines
 
@@ -96,6 +106,8 @@ two past positions), and XGBoost (`MultiOutputRegressor` over `XGBRegressor`,
 24-dim output) on the engineered features, trained on the full train split.
 Metrics (`evaluation/metrics.py`): minADE, minFDE, miss rate at 2 m (miss =
 min over K of final-point error above 2 m). Single-trajectory models are K=1.
+
+Acceptance: a baseline table compares the models.
 
 ## Phase 3. Transformer pretrain
 
@@ -106,6 +118,9 @@ plus cross-entropy on the winning mode. Missing values are zero-filled with
 validity flags. Trained 150 epochs on the easy split (LR 1e-3, batch 64,
 seed 0). The best epoch by val minADE is saved to `checkpoints/pretrained.pt`.
 
+Acceptance: the checkpoint is saved and metrics are logged, even if the model
+does not yet beat XGBoost.
+
 ## Phase 4. Fine-tune on hard scenes
 
 `models/finetune.py` starts from the pretrained checkpoint, trains on the hard
@@ -114,17 +129,22 @@ hard test subset. [inferred] The README reports that this round regressed
 versus pretrained (see "Can regularization fix the round-1 regression?").
 `finetune_regularization_sweep.py` probes weight decay and dropout.
 
+Acceptance: the table shows baseline, pretrained and fine-tuned-v1.
+
 ## Phase 5. HITL flagging and review
 
 - `hitl/flag_uncertain.py` scores hard TRAIN examples by 0.5 times the
   rank of mode-endpoint spread plus 0.5 times the rank of XGBoost-vs-
   transformer endpoint divergence, and flags the top 10% (about 124 of 1,238).
-  The original spec said "each test prediction". The code deliberately uses
-  TRAIN to avoid leakage (rule 2).
+  The original plan flagged test predictions. The code flags TRAIN to avoid
+  leakage (rule 2).
 - `hitl/review_app.py` (Streamlit): shows history, nearby lanes, ground truth,
   the 6 modes and the XGBoost prediction. The reviewer accepts, corrects via 3
   adjustable waypoints, or tags a failure mode. Output goes to
   `corrections/` (gitignored).
+
+Acceptance: the app runs with `streamlit run` (installed as
+`trajflow-review-app`) and one full review pass is saved to `corrections/`.
 
 ## Phase 6. Fine-tune round 2
 
@@ -134,7 +154,10 @@ the same test set. `--ablation-no-corrections` reruns the identical recipe on
 uncorrected labels, so the effect of the corrections is separable from extra
 training. Rows are logged as v2 and v2-control.
 
-## Additional experiments (added after the original spec)
+Acceptance: the table has all four rows (baseline, pretrained, fine-tuned-v1,
+fine-tuned-v2), reported as measured in either direction.
+
+## Additional experiments
 
 - LSTM autoregressive encoder-decoder (`models/lstm.py`), trained on the full
   split, and run through the transformer's pretrain/fine-tune/HITL lineage.
@@ -151,6 +174,8 @@ training. Rows are logged as v2 and v2-control.
 is a Streamlit results dashboard. The README holds the narrative, tables and
 limitations.
 
+Acceptance: the README reads coherently to a reviewer with no prior context.
+
 ## Results logging
 
 `evaluation/evaluate.py::log_metrics` rewrites `results/metrics_comparison.md`.
@@ -158,28 +183,20 @@ A row is keyed on (phase, model, eval split, difficulty), so rerunning replaces
 that row rather than appending a duplicate. `|` and newlines in cells are
 sanitized.
 
-## Known gaps and inconsistencies noticed while drafting [inferred]
+## Known gaps [inferred]
 
-- `finetune_round2.py` docstring says "~100 accepted, ~24 corrected". The mini
-  corrections file (`backups/mini/corrections/`), the README and the results
-  table all say 124 reviewed: 111 accepted, 13 corrected, 1,114 unreviewed of
-  1,238. The docstring is stale and will be fixed in the style cleanup.
 - The working tree is not in the mini state the README describes. Local
   `data/processed/`, `artifacts/flagged.parquet` and `corrections/` come from a
-  scale-up run (train 16,878 rows over 72 scenes with 6,778 hard, 679 flagged, and 154
-  corrections of which 17 changed a label). The `checkpoints/` are still the mini ones
-  (dated 2026-07-08). Rerunning evaluation or round 2 here would mix the two.
-  The mini versions are in `backups/mini/`. `results/metrics_comparison.md` is
-  tracked and identical to the mini backup.
-- `git stash@{0}` ("stashing any uncommitted changes before repo cleanup")
-  holds unreviewed edits to README, `results/metrics_comparison.md`,
-  `preprocess.py`, `paths.py`, `review_app.py`, the dashboard, scene overlay and
-  `tests/test_data_scaleup.py`. It has not been applied or inspected beyond its
-  file list.
-- `evaluate.py` PREAMBLE points to `CLAUDE.md` for the phase plan. That plan
-  now lives here.
+  scale-up run (train 16,878 rows over 72 scenes with 6,778 hard, 679 flagged,
+  and 154 corrections of which 17 changed a label). The `checkpoints/` are
+  still the mini ones (dated 2026-07-08). Rerunning evaluation or round 2 here
+  would mix the two. The mini versions are in `backups/mini/`.
+  `results/metrics_comparison.md` is tracked and identical to the mini backup
+  apart from its header line.
 - `corrections/` is gitignored, so the HITL labels behind v2 are not
   reproducible from the repo.
 - Checkpoints, processed data and nuScenes data have no checksums.
 - Several modules need torch and xgboost imported in a specific order
   (OpenMP conflict on macOS).
+- `build_scene_splits` with `--val-scenes-from-train 0` puts every train scene
+  into val, because the `[-0:]` slice returns the whole list.

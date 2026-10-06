@@ -204,19 +204,20 @@ fine-tuned lineage, trained the LSTM's way), see Results.
 
 **Isolating encoder vs. decoder** (`src/trajflow/models/transformer_ar.py` +
 `train_transformer_ar_full.py`): the full-split controlled comparison
-above still bundles two architectural differences into "the LSTM wins" --
-a recurrent encoder (LSTM) vs. an attention encoder (transformer), *and*
-an autoregressive decoder (one step conditions on the last) vs. a
-parallel one (all T future steps in a single forward pass). This model
+above still bundles two architectural differences into "the LSTM wins".
+One is a recurrent encoder (LSTM) versus an attention encoder (transformer).
+The other is an autoregressive decoder (one step conditions on the last)
+versus a parallel one (all T future steps in a single forward pass). This model
 holds the encoder fixed at TrajectoryTransformer's exact self-attention
 encoder and swaps in an autoregressive `LSTMCell` decoder structurally
-identical to `models/lstm.py`'s -- trained the same full-split, one-pass
-way as the other two, so all three isolate the two factors cleanly:
+identical to the one in `models/lstm.py`. It is trained the same way as the
+other two (full split, one pass), so all three isolate the two factors
+cleanly:
 
   | | parallel decoder | autoregressive decoder |
   |---|---|---|
   | **attention encoder** | Transformer (full-split) | Transformer-AR (full-split) |
-  | **LSTM encoder** | *(not built -- not a natural combination)* | LSTM (baseline) |
+  | **LSTM encoder** | *(not built, not a natural combination)* | LSTM (baseline) |
 
 See Results for which factor actually explains the gap.
 
@@ -224,7 +225,7 @@ See Results for which factor actually explains the gap.
 `finetune_lstm.py` + `finetune_lstm_round2.py`): mirrors Phases 3/4/6
 below exactly (same epochs/LR/loss/model-selection criterion, same
 corrections file for round 2) but for `LSTMTrajectoryModel` instead of
-`TrajectoryTransformer` -- does the LSTM show the same scene-specific
+`TrajectoryTransformer`. Does the LSTM show the same scene-specific
 overfitting the transformer shows when fine-tuned on only 6 scenes, or is
 that a transformer-specific weakness? See Results.
 
@@ -275,9 +276,9 @@ fixable rather than just a stated risk. Sweeps weight decay (Adam,
 otherwise reusing finetune.py's exact recipe (same 60 epochs, LR, seed,
 starting checkpoint) via `evaluation/seed_variance.py`'s `train_loop`, so
 every combination is directly comparable to the canonical
-`fine-tuned-v1`. Deliberately does *not* sweep early stopping separately
--- see the script's docstring for why that wouldn't do anything here
-(the existing best-val-checkpoint selection already achieves its effect).
+`fine-tuned-v1`. Early stopping is not swept separately, because the existing
+best-val-checkpoint selection already has that effect (see the script's
+docstring).
 See Results.
 
 ## Results
@@ -613,9 +614,9 @@ What holds up across seeds, and what doesn't:
   decoder transformer's ~0.68–0.86 range, is strong evidence "decoder
   style is the dominant factor" (see "Isolating encoder vs. decoder"
   above) is a real, robust effect rather than a lucky seed-0 run.
-- **The LSTM's easy-only pretrain stage is surprisingly seed-***unstable***,
-the opposite of Transformer-AR.** Individual seeds: 0.294, 0.463,
-  0.956 (test/all). 0.337, 0.651, 1.558 (test/hard), nearly a 5x spread
+- **The LSTM's easy-only pretrain stage is surprisingly seed-unstable, the
+  opposite of Transformer-AR.** Individual seeds: 0.294, 0.463, 0.956
+  (test/all) and 0.337, 0.651, 1.558 (test/hard), nearly a 5x spread
   on the hard split. The canonical SEED=0 checkpoint happened to land on
   the good end of that range. **Fine-tuning consistently rescues it.**
   Once continued onto the hard split, variance collapses from ±0.281 to
@@ -739,7 +740,7 @@ itself doesn't mean the data is broken.
   expect noticeably longer than mini's few minutes at 850 scenes).
   `preprocess.py --max-scenes N` caps the total scene count (deterministic,
   not a random subsample) for a fast pilot run before committing to all
-  850 -- e.g. `--max-scenes 100 --val-scenes-from-train 10`.
+  850, for example `--max-scenes 100 --val-scenes-from-train 10`.
 - **The dataset is dominated by near-stationary vehicles**, which is why
   constant velocity is such a strong baseline. A production system would
   want metrics stratified by (or a training/eval set rebalanced toward)
@@ -804,7 +805,7 @@ pyproject.toml            dependencies + trajflow-* console-script entry points
 scripts/run_pipeline.sh   one-command runner for the whole non-interactive pipeline
 tests/                    pytest suite (pure-function logic, synthetic data, no dataset needed)
 .github/workflows/ci.yml  runs tests/ on every push/PR
-LICENSE                   MIT (code only -- nuScenes itself has its own license, see below)
+LICENSE                   MIT (code only, nuScenes has its own license, see below)
 
 src/trajflow/
   data/          download (mini + trainval-metadata-only scale-up) + preprocessing, schema doc

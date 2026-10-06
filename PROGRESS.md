@@ -1,13 +1,12 @@
 # Progress
 
-Current phase and what is left. Claude updates this at the end of each
-phase. CLAUDE.md stays stable and does not track status. The "Now" section
-is shown to Claude at the start of each session and after compaction.
+Current phase and what is left, updated at the end of each phase. The "Now"
+section is loaded at the start of each session.
 
 ## Now
 
 - [x] Agent standards v2.0.0 installed on `chore/agent-standards`. Hooks,
-  protected paths, reviewer agents and four owner-only repo skills are in place.
+  protected paths, reviewer agents and six owner-only repo skills are in place.
 - [x] Spec (`docs/SPEC.md`) and decision log (`docs/DECISIONS.md`) drafted from
   the code. Items tagged [inferred] still need the owner's confirmation.
 - [x] Style cleanup of comments and docs, with no behavior change.
@@ -33,7 +32,7 @@ is shown to Claude at the start of each session and after compaction.
 - Phase 0 assessment: retrofit chosen, no secrets or private data in git or
   history, no notebooks.
 - Phase 1: SPEC.md and DECISIONS.md drafted, one interview round.
-- Phase 2: installer run, CLAUDE.md rewritten (82 lines), python rule, protected
+- Phase 2: installer run, CLAUDE.md rewritten (83 lines), python rule, protected
   paths, Makefile, `backups/` ignored, `dev` extra now has hypothesis, ruff and
   mypy, four skills created.
 - Phase 3: style cleanup. Stale docstring numbers in `finetune_round2.py` fixed

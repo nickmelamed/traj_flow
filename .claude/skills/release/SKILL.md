@@ -4,8 +4,8 @@ description: Cut a tagged release. Only the owner starts this.
 disable-model-invocation: true
 ---
 
-Prepare the release version the owner named when invoking this skill (a
-semantic version such as v0.2.0). If none was given, ask for it.
+Prepare the release version the owner names (for example v0.2.0). Ask if none
+is given.
 
 1. Confirm the working tree is clean and on `main` with CI green.
 2. Run the full check suite and any reproduction target, and show the output.

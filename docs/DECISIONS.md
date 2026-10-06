@@ -1,7 +1,6 @@
 # Design decisions
 
-DRAFT. Each entry was inferred from comments and code, not from you. Edit them
-into your own words and delete any that are wrong.
+Draft. Entries are inferred from comments and code and need the owner's edits.
 
 ## D1. Scene-level splits, official val list as test
 Train, val and test are assigned by scene name. TEST is the untouched official
@@ -23,14 +22,14 @@ overfitting.
 
 ## D4. Small models, CPU-friendly
 The transformer has about 108k parameters and the LSTM about 41k. Mini has
-about 8 training scenes, so larger models would just memorise.
+6 training scenes, so larger models would just memorise.
 
 ## D5. Absolute heading removed from learned models
 Global-frame yaw is tied to each scene's road orientation and differs between
 disjoint scenes, so the models could learn train-scene orientation. All other
-features are agent-frame. Removing it made the transformer slightly worse
-(test minADE 0.602 with it), and XGBoost stopped benefiting. It was kept out
-for frame-invariance, and the result is documented rather than hidden.
+features are agent-frame. With heading included, test minADE was 0.602, so removing it made the
+transformer slightly worse and XGBoost stopped benefiting. It stays out for
+frame invariance.
 
 ## D6. Zero-fill plus validity flags for missing values
 Short histories and fewer than 3 neighbors are filled with 0 and paired with an
@@ -71,8 +70,7 @@ beyond the 4-decimal display.
 
 ## D13. Extra experiments instead of removing losing models
 The LSTM, the AR-decoder hybrid and the full-split transformer were added to
-explain why a "smarter" transformer loses to simpler models, not to hide the
-result. The 2x2 encoder/decoder table is the explanation structure.
+explain why the transformer loses to simpler models. The 2x2 encoder/decoder table is the explanation structure.
 
 ## D14. Package layout under `src/trajflow/` with console scripts
 The code was restructured from the original flat layout so it is installable

@@ -18,5 +18,5 @@ does it.
    and confirm every reviewed key is in the train split.
 6. Run `trajflow-finetune-round2`, then `trajflow-finetune-round2
    --ablation-no-corrections`, then the two LSTM round-2 scripts.
-7. Show the test/hard rows for v1, v2 and the control. State plainly whether
+7. Show the test/hard rows for v1, v2 and the control. Say whether
    the corrections helped, including when the answer is no.

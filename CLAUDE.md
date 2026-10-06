@@ -39,7 +39,7 @@ reasons are in docs/DECISIONS.md.
 ## Commands
 
 ```bash
-python -m pytest -q                         # 32 tests, about 7s, synthetic data
+python -m pytest -q                         # 66 tests, about 3s, synthetic data
 python3 scripts/agent/check_style.py .      # style check (the Stop-hook gate)
 make agent-check                            # lint, types, fast tests, style
 make numbers                                # README numbers vs generated sources
@@ -70,8 +70,8 @@ The venv is `traj/` (Python 3.11, `pip install -e ".[dev]"`).
 
 - Plan before multi-file changes and wait for approval when a task spans
   several modules or touches the spec.
-- A task is done when the Stop hook's checks pass and you have shown the
-  output. Show commands and results, not claims.
+- A task is done when the Stop hook's checks pass. Show the commands and
+  their output.
 - Commit in small atomic Conventional Commits (`type(scope): subject`), with
   code and its tests together.
 - Run `git commit` only when the owner asks, and wrap it in `timeout 40`.

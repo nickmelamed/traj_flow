@@ -18,7 +18,7 @@ Reproduce the mini-scale results. This retrains models and rewrites rows in
    `trajflow-moving-subset-analysis | tee results/moving_subset.txt`,
    `trajflow-finetune-regularization-sweep | tee results/regularization_sweep.txt`.
 5. Diff the new table against the saved copy and list every changed number.
-   Training is seeded but not guaranteed bit-identical, so report differences
-   as they are and never edit the table to match.
+   Training is seeded but not guaranteed bit-identical, so report the
+   differences and never edit the table to match.
 6. Run `make numbers` and show which README numbers no longer match.
 7. Do not update README numbers without the owner's approval.
