@@ -15,7 +15,7 @@ Design notes:
     so the training recipe run here is identical to the one that produced
     the canonical checkpoints -- only the seed differs.
   - Does NOT overwrite any canonical checkpoint (pretrained.pt,
-    finetuned_v1.pt, ...); models trained here are transient, kept only in
+    finetuned_v1.pt, ...). Models trained here are transient, kept only in
     memory to compute metrics, then discarded. The canonical SEED=0
     checkpoints used everywhere else in the pipeline (dashboard, HITL
     review, scene overlays) are untouched.

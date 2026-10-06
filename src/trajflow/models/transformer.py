@@ -7,7 +7,7 @@ self-attention block over learned mode tokens.
 
 Missing values (short history near scene starts, fewer than 3 neighbors)
 are zero-filled with an explicit validity flag alongside each such
-feature, rather than silently imputed — the model can learn to
+feature, rather than silently imputed, so the model can learn to
 distinguish "value is 0" from "value is unknown".
 """
 

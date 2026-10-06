@@ -4,13 +4,13 @@ Predicts the flattened 24-dim future waypoint vector (12 timesteps x 2)
 from engineered scalar / past-position / neighbor features, via one
 independent XGBoost regressor per target dimension (sklearn's
 MultiOutputRegressor wrapping XGBRegressor). Trained on the full train
-split (all difficulties — the easy/hard split is reserved for the
+split (all difficulties, since the easy/hard split is reserved for the
 transformer pretrain/fine-tune structure in Phases 3-4).
 
 XGBoost's native missing-value handling (missing=np.nan) means we don't
 need to impute the NaNs that show up near scene starts (no velocity/
 acceleration/heading-change-rate yet) or when fewer than 3 neighbors are
-present — they're passed through as-is.
+present, so they are passed through as-is.
 """
 
 import joblib

@@ -3,9 +3,9 @@ set and continue fine-tuning from the round-1 checkpoint.
 
 Merge: for the 124 flagged hard-TRAIN examples reviewed in Phase 5, this
 overwrites future_x/y with the reviewer's corrected_future_x/y wherever
-provided (a no-op for the ~100 "accept ground truth as-is" rows, since
-those were saved with corrected == original; an actual edit for the ~24
-"correct trajectory" rows). The other ~1,114 unreviewed hard-train rows
+provided. That is a no-op for the 111 "accept ground truth as-is" rows,
+since those were saved with corrected == original, and an actual edit for
+the 13 "correct trajectory" rows. The other ~1,114 unreviewed hard-train rows
 are untouched. Net effect: a small fraction of training labels change.
 
 Continues from models/checkpoints/finetuned_v1.pt (not the original

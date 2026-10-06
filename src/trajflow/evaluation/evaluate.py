@@ -66,7 +66,7 @@ def _row_key(line: str) -> tuple:
 
 def _sanitize_cell(value: str) -> str:
     """Neutralize characters that would corrupt the pipe-delimited markdown
-    table (a literal "|" would shift every later column; a newline would
+    table (a literal "|" would shift every later column, and a newline would
     split one row into two lines `_read_existing_rows` can't reassemble).
     """
     return str(value).replace("|", "/").replace("\n", " ").replace("\r", " ")

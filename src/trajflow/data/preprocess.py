@@ -10,7 +10,7 @@ For every (vehicle instance, sample) pair with a full 6s future, this:
     samples appear in more than one split (avoids leakage)
 
 Splits: for v1.0-mini, nuScenes defines mini_train (8 scenes) / mini_val
-(2 scenes); we hold mini_val out untouched as our TEST set (matches the
+(2 scenes). We hold mini_val out untouched as our TEST set (matches the
 official split exactly, never trained on) and carve the last `--val-
 scenes-from-train` scenes of mini_train into our VAL set, keeping the rest
 as TRAIN. For any other `--version` (e.g. v1.0-trainval, see
@@ -21,7 +21,7 @@ scene-level carving happens over the official `train` (700 scenes) /
 substantially at trainval scale (e.g. --val-scenes-from-train 50) so VAL
 isn't a vanishingly small fraction of TRAIN. All carving is scene-level.
 
-Output: data/processed/{train,val,test}.parquet — schema documented in
+Output: data/processed/{train,val,test}.parquet. The schema is documented in
 data/SCHEMA.md.
 """
 
@@ -250,20 +250,20 @@ One row = one (vehicle instance, sample) trajectory-prediction example.
 | column | meaning |
 |---|---|
 | `instance_token`, `sample_token` | nuScenes identifiers for the agent / timestep |
-| `scene_name`, `split` | source scene and its assigned split (train/val/test), scene-level — no leakage |
+| `scene_name`, `split` | source scene and its assigned split (train/val/test), scene-level so there is no leakage |
 | `category_name` | nuScenes category, e.g. `vehicle.car` |
 | `map_name` | nuScenes map location |
-| `difficulty` | `easy` or `hard` — see classification rule below |
+| `difficulty` | `easy` or `hard`, see the difficulty rule below |
 | `near_intersection` | bool, agent is within {INTERSECTION_RADIUS}m of a `road_segment` with `is_intersection=True` |
 | `neighbor_density_count` | # other agents within {NEIGHBOR_DENSITY_RADIUS}m |
-| `velocity`, `acceleration`, `heading`, `heading_change_rate` | from `PredictHelper`, NaN where insufficient history (e.g. first sample in a scene) |
-| `past_x_0..{PAST_STEPS - 1}`, `past_y_0..{PAST_STEPS - 1}` | {PAST_SECONDS}s of past xy, agent frame, chronological (index 0 = oldest); NaN-padded if history is shorter |
-| `future_x_0..{FUTURE_STEPS - 1}`, `future_y_0..{FUTURE_STEPS - 1}` | {FUTURE_SECONDS}s of future xy, agent frame, chronological ground truth — always fully present (rows without a full future are dropped) |
-| `neighbor_dist_0..2`, `neighbor_rel_heading_0..2` | distance (m) and relative heading (rad) to the 3 nearest other agents (any category) within {NEIGHBOR_RADIUS_MAX}m, sorted by distance; NaN-padded if fewer than 3 present |
+| `velocity`, `acceleration`, `heading`, `heading_change_rate` | from `PredictHelper`, NaN where there is insufficient history, e.g. the first sample in a scene |
+| `past_x_0..{PAST_STEPS - 1}`, `past_y_0..{PAST_STEPS - 1}` | {PAST_SECONDS}s of past xy, agent frame, chronological (index 0 = oldest). NaN-padded if history is shorter |
+| `future_x_0..{FUTURE_STEPS - 1}`, `future_y_0..{FUTURE_STEPS - 1}` | {FUTURE_SECONDS}s of future xy, agent frame, chronological ground truth, always fully present because rows without a full future are dropped |
+| `neighbor_dist_0..2`, `neighbor_rel_heading_0..2` | distance (m) and relative heading (rad) to the 3 nearest other agents (any category) within {NEIGHBOR_RADIUS_MAX}m, sorted by distance. NaN-padded if fewer than 3 present |
 
 ## Difficulty rule
 
-An example is **hard** if `near_intersection` is True OR `neighbor_density_count >= {DENSITY_THRESHOLD}`;
+An example is **hard** if `near_intersection` is True OR `neighbor_density_count >= {DENSITY_THRESHOLD}`,
 otherwise **easy**.
 
 ## Splits
