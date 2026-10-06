@@ -87,14 +87,17 @@ def best_mode_endpoint(traj: np.ndarray, logits: np.ndarray) -> np.ndarray:
     return traj[idx, best, -1, :]
 
 
-def main() -> None:
-    df = filter_difficulty(load_split("train"), "hard").reset_index(drop=True)
+def load_candidates() -> pd.DataFrame:
+    """Return the hard-scene TRAIN rows that are eligible for flagging."""
+    return filter_difficulty(load_split("train"), "hard").reset_index(drop=True)
 
-    xgb_model = joblib.load(XGB_MODEL_PATH)
-    xgb_preds = xgb_model.predict(xgb_make_features(df)).reshape(len(df), 12, 2)
-    xgb_endpoint = xgb_preds[:, -1, :]
 
-    traj, logits = transformer_predictions(df)
+def score_candidates(df: pd.DataFrame, xgb_endpoint: np.ndarray, traj: np.ndarray, logits: np.ndarray) -> pd.DataFrame:
+    """Score each row of ``df`` and mark the top ``TOP_FRACTION`` for review.
+
+    ``xgb_endpoint`` is [N, 2], ``traj`` is [N, K, T, 2] and ``logits`` is [N, K].
+    The output has one row per input row, sorted by descending score.
+    """
     spread = mode_endpoint_spread(traj)
     transformer_endpoint = best_mode_endpoint(traj, logits)
 
@@ -112,7 +115,18 @@ def main() -> None:
     threshold = out["uncertainty_score"].quantile(1 - TOP_FRACTION)
     out["needs_review"] = out["uncertainty_score"] >= threshold
 
-    out = out.sort_values("uncertainty_score", ascending=False).reset_index(drop=True)
+    return out.sort_values("uncertainty_score", ascending=False).reset_index(drop=True)
+
+
+def main() -> None:
+    df = load_candidates()
+
+    xgb_model = joblib.load(XGB_MODEL_PATH)
+    xgb_preds = xgb_model.predict(xgb_make_features(df)).reshape(len(df), 12, 2)
+    xgb_endpoint = xgb_preds[:, -1, :]
+
+    traj, logits = transformer_predictions(df)
+    out = score_candidates(df, xgb_endpoint, traj, logits)
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     out.to_parquet(OUTPUT_PATH, index=False)
 
