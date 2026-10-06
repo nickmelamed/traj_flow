@@ -1,8 +1,8 @@
 # TrajFlow spec
 
-Status: draft. Lines tagged **[inferred]** come from the code and are
-unconfirmed. Lines tagged **[confirmed]** come from the owner. Untagged lines
-are visible in the code.
+Lines tagged **[confirmed]** come from the owner. Lines tagged **[inferred]**
+come from the code or the README and have not been checked one by one.
+Untagged lines are visible in the code.
 
 Sections 0 to 7 match the original phase plan, so references such as
 "Phase 4" still resolve.
@@ -37,14 +37,14 @@ measured results, including negative ones.
    Never round, cherry-pick, or drop a metric because a model lost. Negative
    results stay in the tables. `metrics_comparison.md` holds unrounded values
    formatted to 4 decimals.
-4. **Same test set for every comparison** [inferred]. Baselines, pretrained,
+4. **Same test set for every comparison** [confirmed]. Baselines, pretrained,
    fine-tuned-v1/v2, control, LSTM and ablations are all evaluated on the same
-   test parquet. Not selected by the owner as a hard rule, so confirm.
+   test parquet.
 5. **README numbers match the results table** [confirmed as a claim to
    enforce, see Claims below].
-6. **Model selection uses val only** [inferred]. Best checkpoint is chosen by
+6. **Model selection uses val only** [confirmed]. Best checkpoint is chosen by
    val minADE. Test is reported and never used to pick.
-7. **No absolute-heading feature in the learned models** [inferred]. Raw
+7. **No absolute-heading feature in the learned models** [confirmed]. Raw
    `heading` is excluded from the transformer context because it leaked scene
    orientation (see `models/transformer.py` and DECISIONS.md).
 
@@ -185,14 +185,11 @@ sanitized.
 
 ## Known gaps [inferred]
 
-- The working tree is not in the mini state the README describes. Local
-  `data/processed/`, `artifacts/flagged.parquet` and `corrections/` come from a
-  scale-up run (train 16,878 rows over 72 scenes with 6,778 hard, 679 flagged,
-  and 154 corrections of which 17 changed a label). The `checkpoints/` are
-  still the mini ones (dated 2026-07-08). Rerunning evaluation or round 2 here
-  would mix the two. The mini versions are in `backups/mini/`.
-  `results/metrics_comparison.md` is tracked and identical to the mini backup
-  apart from its header line.
+- The local `data/processed/`, `artifacts/flagged.parquet` and `corrections/`
+  were restored to the mini state the README describes. The scale-up copies
+  (train 16,878 rows over 72 scenes, 679 flagged, 154 corrections) are in
+  `backups/scaleup/` and the mini copies are in `backups/mini/`. Rerunning
+  evaluation or round 2 against a mix of the two would be wrong.
 - `corrections/` is gitignored, so the HITL labels behind v2 are not
   reproducible from the repo.
 - Checkpoints, processed data and nuScenes data have no checksums.
