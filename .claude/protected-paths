@@ -1,0 +1,33 @@
+# Edits to these paths need the owner's approval, even in auto mode.
+# One glob per line, relative to the repo root. "*" crosses directories and a
+# trailing "/" means everything under it. Text after "  #" is the reason.
+#
+# The agent's own settings, this list, gate-commands, style-ignore,
+# style-words, and scripts/agent/ are always protected by guard_edit.py,
+# whatever this file says.
+CLAUDE.md  # the project's instructions to Claude
+.claude/rules/  # path-scoped standards
+.claude/agents/  # reviewer agents
+.claude/skills/  # repo procedures
+Makefile  # defines agent-check and ci
+pyproject.toml  # dependencies and lint, type, and test configuration
+setup.cfg  # tool configuration
+pytest.ini  # test selection
+tox.ini  # test selection
+.pre-commit-config.yaml  # commit hooks
+.github/workflows/  # CI
+*.lock  # locked dependencies
+package-lock.json  # locked dependencies
+src/trajflow/evaluation/  # evaluation code and metric definitions
+src/trajflow/data/preprocess.py  # scene-level splits and difficulty rule
+src/trajflow/hitl/flag_uncertain.py  # flags TRAIN only, never test
+src/trajflow/paths.py  # where results and data are read and written
+tests/test_metrics.py  # oracle for the metric definitions
+results/metrics_comparison.md  # results table, written only by log_metrics
+results/figures/  # figures that back the README
+data/SCHEMA.md  # parquet schema
+data/processed/  # eval-only test split lives here
+backups/  # mini-scale copy of data, checkpoints and corrections
+corrections/  # HITL labels behind fine-tuned-v2
+.env  # secrets
+.env.*  # secrets

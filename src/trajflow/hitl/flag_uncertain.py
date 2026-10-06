@@ -7,7 +7,7 @@ Uncertainty score combines two signals:
       transformer's most-likely mode (two different model families
       disagreeing with each other)
 
-Each is rank-normalized to [0, 1] and averaged; the top ~10% highest-
+Each is rank-normalized to [0, 1] and averaged. The top ~10% highest-
 scoring examples are flagged as "needs review" in hitl/review_app.py.
 
 Why TRAIN and not TEST: Phase 6 merges the resulting corrections back

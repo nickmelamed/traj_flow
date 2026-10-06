@@ -21,7 +21,7 @@ PREAMBLE = (
     "# TrajFlow — Metrics Comparison\n\n"
     "Every model / eval-split / difficulty-filter combination run so far, logged honestly\n"
     "(including underperforming results — nothing is rounded or omitted to look better).\n"
-    "See `data/SCHEMA.md` for column definitions and `CLAUDE.md` for the phase plan.\n\n"
+    "See `data/SCHEMA.md` for column definitions and `docs/SPEC.md` for the phase plan.\n\n"
 )
 
 
@@ -66,7 +66,7 @@ def _row_key(line: str) -> tuple:
 
 def _sanitize_cell(value: str) -> str:
     """Neutralize characters that would corrupt the pipe-delimited markdown
-    table (a literal "|" would shift every later column; a newline would
+    table (a literal "|" would shift every later column, and a newline would
     split one row into two lines `_read_existing_rows` can't reassemble).
     """
     return str(value).replace("|", "/").replace("\n", " ").replace("\r", " ")

@@ -70,8 +70,8 @@ from trajflow.paths import NUSCENES_ROOT as DATA_ROOT
 
 DEFAULT_VERSION = "v1.0-mini"
 # At least one of these vector map expansion files must exist. This is a
-# SEPARATE download from the basic Mini archive (see instructions below) —
-# it's what powers intersection-proximity lookups via NuScenesMap. Shared
+# SEPARATE download from the basic Mini archive (see instructions below).
+# It powers intersection-proximity lookups via NuScenesMap. Shared
 # across every version (mini or trainval) since nuScenes has only 4
 # physical map locations total.
 MAP_EXPANSION_FILES = [

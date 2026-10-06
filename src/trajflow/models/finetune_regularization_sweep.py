@@ -1,7 +1,7 @@
 """Regularization sweep for fine-tune round 1 (models/finetune.py) -- the
 step that showed test-set overfitting (minADE 0.758 -> 0.925 test/all,
 confirmed across all 3 seeds in seed_variance.py). "Fine-tuning on 6
-scenes is overfitting-prone" was documented as a limitation; this script
+scenes is overfitting-prone" was documented as a limitation. This script
 asks the natural follow-up: is it fixable, not just documentable?
 
 Sweeps weight_decay x dropout, holding everything else -- epochs, LR,

@@ -1,8 +1,8 @@
 """Controlled comparison experiment: trains the SAME TrajectoryTransformer
 architecture used by the pretrain/fine-tune/HITL lineage, but on the FULL
 train split in one single pass -- exactly matching how models/train_lstm.py
-trains the LSTM. Same data, same loss, same training budget as the LSTM;
-only the architecture differs.
+trains the LSTM. Same data, same loss, same training budget as the LSTM.
+Only the architecture differs.
 
 Why this exists: the LSTM (models/train_lstm.py) substantially
 outperforms every transformer checkpoint, but it was trained differently

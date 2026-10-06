@@ -2,7 +2,7 @@
 
 Extrapolates the agent's final observed velocity (agent frame, heading-
 aligned, so the y-axis points along the agent's current heading) linearly
-over the 6s future horizon. No learning involved — this is the simplest
+over the 6s future horizon. No learning is involved. This is the simplest
 possible baseline, meant to calibrate how much the learned models below
 actually buy us.
 """
@@ -37,7 +37,7 @@ def main() -> None:
     # Limitations section as evidence that any single-run result here should
     # be read as "plausible given this data," not "precisely measured."
     # Without this, that claim would cite numbers nothing in the repo
-    # actually computes or logs -- see CLAUDE.md's "log every metric" rule.
+    # actually computes or logs.
     for eval_split in ["train", "val", "test"]:
         for difficulty in ["all", "easy", "hard"]:
             df = filter_difficulty(load_split(eval_split), difficulty)

@@ -9,7 +9,7 @@ majority. Constant velocity wins in aggregate almost entirely because of
 it -- restricted to vehicles that actually move, several learned models
 do better. This is the single script that evaluates ALL models on that
 subset consistently (previously computed ad hoc for just two models
-inside viz/scene_overlay.py; this supersedes that).
+inside viz/scene_overlay.py, which this supersedes).
 
 Statistical caveat this script exists to quantify, not just state: the
 moving subset is only 63 test examples. A 95% bootstrap CI (2,000

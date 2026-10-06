@@ -5,7 +5,7 @@ for a handful of representative test examples.
 
 The transformer's single plotted/scored prediction is its BEST-OF-K mode
 (closest to ground truth), matching minADE's own selection rule -- not
-its highest-probability mode. These give different numbers; picking the
+its highest-probability mode. These give different numbers, and picking the
 latter here would make per-example captions inconsistent with the
 official minADE reported everywhere else in this project.
 

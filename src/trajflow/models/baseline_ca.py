@@ -9,8 +9,8 @@ stationary if none are available -- same graceful-degradation style as
 models/baseline_cv.py.
 
 Added in a later pass alongside models/lstm.py to broaden the baseline
-comparison (CLAUDE.md's Phase 2 originally specced constant-velocity +
-XGBoost only); logged under the same phase=2 for consistency since it's
+comparison (the original Phase 2 plan had constant velocity and
+XGBoost only). Logged under the same phase=2 for consistency since it's
 the same category of classical, no-training baseline.
 """
 

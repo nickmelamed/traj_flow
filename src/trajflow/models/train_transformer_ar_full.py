@@ -1,7 +1,7 @@
 """Trains TransformerARModel (see models/transformer_ar.py) on the FULL
 train split in one pass -- exactly matching how train_lstm.py trains the
 LSTM and train_transformer_full.py trains the parallel-decoder
-transformer. Same data, same loss, same training budget as both; only the
+transformer. Same data, same loss, same training budget as both. Only the
 decoder differs from train_transformer_full.py (autoregressive vs.
 parallel) while the encoder differs from train_lstm.py (attention vs.
 LSTM). Together, all three full-split models isolate encoder type from
