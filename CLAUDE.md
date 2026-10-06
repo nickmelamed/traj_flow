@@ -39,7 +39,7 @@ reasons are in docs/DECISIONS.md.
 ## Commands
 
 ```bash
-python -m pytest -q                         # 66 tests, about 3s, synthetic data
+python -m pytest -q                         # 77 tests, about 4s, synthetic data
 python3 scripts/agent/check_style.py .      # style check (the Stop-hook gate)
 make agent-check                            # lint, types, fast tests, style
 make numbers                                # README numbers vs generated sources
