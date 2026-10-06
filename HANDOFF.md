@@ -5,7 +5,7 @@ Written for a fresh Claude Code session. Read this first, then `CLAUDE.md`,
 
 ## Where things stand
 
-- `main` holds everything. PR #1 (agent standards) and PRs #2 to #9 are merged,
+- `main` holds everything. PR #1 (agent standards) and PRs #2 to #10 are merged,
   and `main` is the only branch, locally and on `origin`.
 - `make ci`, `make numbers` and the Stop gate all pass on `main`. The gate runs
   the style check, `make lint`, `make typecheck`, `make numbers` and
@@ -90,19 +90,36 @@ Written for a fresh Claude Code session. Read this first, then `CLAUDE.md`,
 
 ## Open items
 
-1. Confirm the hooks run in a fresh session. Restart Claude Code, then ask it to
-   `cat .env.test`. The read must be blocked. This already passed in a live
-   session through both the Bash and Read hooks, and the scripted smoke test
-   passes, so this only checks the case after a restart.
-2. Optional cleanup. The old stash diff is saved at
-   `~/Desktop/GitHub/traj_flow-stash-b2e4efe.patch`, outside the repo. Its
-   pilot paragraph was reworded into the README, and the rest holds scale-up
-   results rows and schema text that should not come back. The owner can delete
-   it.
+Nothing is outstanding for the reported run. The hooks passed the scripted smoke
+test and the earlier live check, and the old stash patch has been deleted. The
+HITL review is finished (124 examples reviewed). More review would be a new
+experiment with its own round-2 run, and the reported results are the mini run.
 
-Nothing else is outstanding. The HITL review of the reported run is finished
-(124 examples reviewed). More review would be a new experiment with its own
-round-2 run, and the reported results are the mini run.
+## Ideas for a future version
+
+Each of these is a new experiment or a design change. Plan it first, read the
+matching section of `docs/SPEC.md`, and keep its artifacts apart from the mini
+state (rule 7).
+
+1. Pilot results on the 100-scene trainval data. Preprocessing, flagging and
+   review exist in `backups/scaleup/`, but no models were trained or evaluated
+   there. Train every model on that state and write the rows to a separate
+   results table, so the mini table stays as reported.
+2. A second HITL round with a larger review budget. Compare it to the 124-example
+   round on the same test parquet, and report the gain per corrected label.
+3. Check whether the flagging score is calibrated. Plot flagged rank against
+   realized ADE on held-out TRAIN scenes, and compare it to random selection.
+4. Run more seeds for the transformer and the LSTM. The current seed variance
+   run is the main caveat on the model comparison.
+5. Add map context as a feature, such as lane centerline offset. Keep absolute
+   global heading out of the features (rule 6).
+6. Add a gradient-boosted or MLP baseline with the same features as XGBoost, to
+   separate the effect of the architecture from the effect of the features.
+7. Stratify the test metrics by scenario, such as turning, stopping and
+   starting, and report where each model loses.
+8. Make the corrections reproducible without publishing nuScenes content. One
+   option is a script that regenerates `corrections.parquet` from a list of
+   hashed tokens and the reviewer's decisions.
 
 ## Useful commands
 

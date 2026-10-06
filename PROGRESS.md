@@ -20,12 +20,27 @@ section is loaded at the start of each session.
 
 ## Next
 
-- [ ] Restart Claude Code and confirm the hooks run in a fresh session. Ask
-  Claude to `cat .env.test` and check it is blocked. This passed in a live
-  session already, so it only needs repeating after a restart.
+Nothing is required for the reported run. The items below are optional future
+work. Each is a new experiment, so plan it first and keep its artifacts apart
+from the mini state.
+
+- [ ] Train and evaluate every model on the 100-scene trainval pilot data, with
+  its own results table.
+- [ ] Run a second HITL round with a larger review budget and compare it to the
+  124-example round on the same test parquet.
+- [ ] Check the calibration of the flagging score against random selection.
+- [ ] Add more seeds for the transformer and the LSTM.
+- [ ] Try map context features, without absolute global heading (rule 6).
+- [ ] Add a same-feature MLP or boosted baseline to separate architecture from
+  features.
+- [ ] Stratify test metrics by scenario (turning, stopping, starting).
+- [ ] Find a way to reproduce the corrections without publishing nuScenes
+  content.
 
 ## Done
 
+- Hooks confirmed by the scripted smoke test, after the earlier live check. The
+  old stash patch was deleted.
 - Phase 0 assessment: retrofit chosen, no secrets or private data in git or
   history, no notebooks.
 - Phase 1: SPEC.md and DECISIONS.md drafted, one interview round.
