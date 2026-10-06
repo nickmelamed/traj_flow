@@ -33,10 +33,9 @@ measured results, including negative ones.
 2. **Corrections never touch test** [confirmed]. HITL flagging and review run on
    hard-scene TRAIN examples only (`hitl/flag_uncertain.py`). Corrected labels
    must never appear in any split used for final evaluation.
-3. **Report as measured** [inferred from CLAUDE.md "Do NOT" section and README].
-   Never round, cherry-pick, or drop a metric because a model lost. Negative
-   results stay in the tables. `metrics_comparison.md` holds unrounded values
-   formatted to 4 decimals.
+3. **Report as measured** [confirmed]. Never round, cherry-pick, or drop a
+   metric because a model lost. Negative results stay in the tables.
+   `log_metrics` writes the values in `metrics_comparison.md` to 4 decimals.
 4. **Same test set for every comparison** [confirmed]. Baselines, pretrained,
    fine-tuned-v1/v2, control, LSTM and ablations are all evaluated on the same
    test parquet.
@@ -125,8 +124,8 @@ does not yet beat XGBoost.
 
 `models/finetune.py` starts from the pretrained checkpoint, trains on the hard
 split with a lower LR and fewer epochs, giving `fine-tuned-v1`. Compared on the
-hard test subset. [inferred] The README reports that this round regressed
-versus pretrained (see "Can regularization fix the round-1 regression?").
+hard test subset. The README reports that this round regressed versus
+pretrained (see "Can regularization fix the fine-tuning regression?").
 `finetune_regularization_sweep.py` probes weight decay and dropout.
 
 Acceptance: the table shows baseline, pretrained and fine-tuned-v1.
@@ -183,7 +182,7 @@ A row is keyed on (phase, model, eval split, difficulty), so rerunning replaces
 that row rather than appending a duplicate. `|` and newlines in cells are
 sanitized.
 
-## Known gaps [inferred]
+## Known gaps
 
 - The local `data/processed/`, `artifacts/flagged.parquet` and `corrections/`
   were restored to the mini state the README describes. The scale-up copies
@@ -192,8 +191,7 @@ sanitized.
   evaluation or round 2 against a mix of the two would be wrong.
 - `corrections/` is gitignored, so the HITL labels behind v2 are not
   reproducible from the repo.
-- Checkpoints, processed data and nuScenes data have no checksums.
+- `data/CHECKSUMS.sha256` holds checksums for the mini processed data, flagged
+  rows, corrections and checkpoints. The nuScenes data has none.
 - Several modules need torch and xgboost imported in a specific order
   (OpenMP conflict on macOS).
-- `build_scene_splits` with `--val-scenes-from-train 0` puts every train scene
-  into val, because the `[-0:]` slice returns the whole list.
