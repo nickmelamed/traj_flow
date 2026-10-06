@@ -56,6 +56,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: tests that take more than a few seconds, skipped by make test-fast"]
 
 [[tool.mypy.overrides]]
 module = ["nuscenes.*", "pandas.*", "plotly.*", "joblib.*", "pyquaternion.*", "scipy.*", "sklearn.*", "tqdm.*"]

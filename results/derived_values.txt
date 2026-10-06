@@ -1,0 +1,15 @@
+Derived from results/metrics_comparison.md and results/seed_variance.txt.
+
+Fine-tuned-v1 minus pretrained, test/all minADE, per seed:
+  seed 0: +0.1650
+  seed 1: +0.1403
+  seed 2: +0.2100
+
+Canonical run, test/all minADE:
+  round-1 regression (fine-tuned-v1 minus pretrained): +0.1665
+  with wd=1e-3 (minus pretrained): +0.0546
+  regression reduction from wd=1e-3: 67.2%
+
+Share of the full-split transformer to LSTM gap closed by the AR decoder:
+  test/all: 95.7%
+  moving subset: 54.5%

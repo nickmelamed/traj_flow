@@ -1,0 +1,17 @@
+Baseline (finetune.py's actual recipe: weight_decay=0.0, dropout=0.1) for reference:
+  test/all minADE=0.9249 (canonical finetuned_v1.pt, logged in results/metrics_comparison.md)
+
+weight_decay=0        dropout=0.1  val_minADE=2.1638  test/all_minADE=0.9249  test/hard_minADE=0.8961
+weight_decay=0        dropout=0.3  val_minADE=2.2968  test/all_minADE=0.7584  test/hard_minADE=0.7976
+weight_decay=0.0001   dropout=0.1  val_minADE=2.1782  test/all_minADE=0.8619  test/hard_minADE=0.8632
+weight_decay=0.0001   dropout=0.3  val_minADE=2.2968  test/all_minADE=0.7584  test/hard_minADE=0.7976
+weight_decay=0.001    dropout=0.1  val_minADE=2.1483  test/all_minADE=0.8130  test/hard_minADE=0.8438
+weight_decay=0.001    dropout=0.3  val_minADE=2.2968  test/all_minADE=0.7584  test/hard_minADE=0.7976
+
+Ranked by test/all minADE (lower is better; canonical finetune.py recipe is wd=0.0, dropout=0.1 -> 0.9249):
+  0.7584  wd=0 dropout=0.3
+  0.7584  wd=0.0001 dropout=0.3
+  0.7584  wd=0.001 dropout=0.3
+  0.8130  wd=0.001 dropout=0.1
+  0.8619  wd=0.0001 dropout=0.1
+  0.9249  wd=0 dropout=0.1
