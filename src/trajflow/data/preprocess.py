@@ -41,7 +41,7 @@ from tqdm import tqdm
 
 from trajflow.paths import NUSCENES_ROOT as DEFAULT_DATAROOT
 from trajflow.paths import PROCESSED_DIR as DEFAULT_OUT
-from trajflow.paths import SCHEMA_PATH
+from trajflow.paths import PROCESSED_VERSION_PATH, SCHEMA_PATH
 
 PAST_SECONDS = 2.0
 FUTURE_SECONDS = 6.0
@@ -312,6 +312,7 @@ def main() -> int:
 
     args.out.mkdir(parents=True, exist_ok=True)
     write_schema_doc(SCHEMA_PATH, args.version, args.val_scenes_from_train)
+    PROCESSED_VERSION_PATH.write_text(args.version)
 
     print("\n=== Preprocessing summary ===")
     print(f"Candidate vehicle instance-samples: {stats['candidates']}")

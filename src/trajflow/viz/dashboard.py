@@ -39,6 +39,7 @@ from trajflow.data.preprocess import DEFAULT_DATAROOT, PAST_STEPS
 from trajflow.evaluation.evaluate import future_xy, load_split
 from trajflow.evaluation.moving_subset_analysis import per_example_min_ade
 from trajflow.paths import RESULTS_PATH as METRICS_PATH
+from trajflow.paths import active_nuscenes_version
 from trajflow.viz.model_registry import MODEL_SPECS
 
 MAP_RADIUS = 40.0
@@ -75,7 +76,8 @@ def get_predict_fn(model_key: str):
 
 @st.cache_resource
 def load_nusc():
-    nusc = NuScenes(version="v1.0-mini", dataroot=str(DEFAULT_DATAROOT), verbose=False)
+    # Tokens in the processed rows only exist in the version they were built from.
+    nusc = NuScenes(version=active_nuscenes_version(), dataroot=str(DEFAULT_DATAROOT), verbose=False)
     helper = PredictHelper(nusc)
     return nusc, helper
 

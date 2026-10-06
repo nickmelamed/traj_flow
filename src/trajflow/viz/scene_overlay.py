@@ -47,6 +47,7 @@ from trajflow.evaluation.evaluate import future_xy, load_split
 from trajflow.models.lstm import LSTMTrajectoryModel
 from trajflow.models.transformer import TrajectoryTransformer
 from trajflow.paths import FIGURES_DIR as OUTPUT_DIR
+from trajflow.paths import active_nuscenes_version
 from trajflow.viz.model_registry import load_cv_predict_fn, load_multimodal_predict_fn
 
 MAP_RADIUS = 40.0
@@ -134,7 +135,8 @@ def plot_example(row, model_lines: list, map_cache: dict, helper: PredictHelper,
 
 
 def main() -> None:
-    nusc = NuScenes(version="v1.0-mini", dataroot=str(DEFAULT_DATAROOT), verbose=False)
+    # Tokens in the processed rows only exist in the version they were built from.
+    nusc = NuScenes(version=active_nuscenes_version(), dataroot=str(DEFAULT_DATAROOT), verbose=False)
     helper = PredictHelper(nusc)
 
     test_df = load_split("test").reset_index(drop=True)
