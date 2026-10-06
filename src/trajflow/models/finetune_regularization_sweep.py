@@ -51,7 +51,7 @@ def main() -> None:
 
     pretrained_state = torch.load(PRETRAINED_CHECKPOINT)
 
-    print(f"Baseline (finetune.py's actual recipe: weight_decay=0.0, dropout=0.1) for reference:")
+    print("Baseline (finetune.py's actual recipe: weight_decay=0.0, dropout=0.1) for reference:")
     print("  test/all minADE=0.9249 (canonical finetuned_v1.pt, logged in results/metrics_comparison.md)")
     print()
 

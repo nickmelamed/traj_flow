@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from trajflow.hitl import flag_uncertain
 from trajflow.hitl.flag_uncertain import best_mode_endpoint, mode_endpoint_spread
 from trajflow.models.finetune_round2 import merge_corrections
 from trajflow.models.transformer import FUTURE_STEPS
@@ -86,3 +87,53 @@ def test_best_mode_endpoint_follows_argmax_logits():
     logits = np.array([[0.1, 5.0, 0.2]])  # mode 1 is the confident pick
     endpoint = best_mode_endpoint(traj, logits)
     np.testing.assert_allclose(endpoint[0], [2.0, 0.0])
+
+
+def _split_frame():
+    return pd.DataFrame({
+        "instance_token": [f"inst-{i}" for i in range(6)],
+        "sample_token": [f"samp-{i}" for i in range(6)],
+        "scene_name": ["scene-a", "scene-a", "scene-b", "scene-b", "scene-c", "scene-c"],
+        "difficulty": ["hard", "easy", "hard", "easy", "hard", "hard"],
+    })
+
+
+def test_load_candidates_reads_only_the_train_split_and_only_hard_rows(monkeypatch):
+    requested = []
+
+    def fake_load_split(name):
+        requested.append(name)
+        if name != "train":
+            raise AssertionError(f"flagging must not read the {name} split")
+        return _split_frame()
+
+    monkeypatch.setattr(flag_uncertain, "load_split", fake_load_split)
+    df = flag_uncertain.load_candidates()
+
+    assert requested == ["train"]
+    assert set(df["difficulty"]) == {"hard"}
+    assert list(df["instance_token"]) == ["inst-0", "inst-2", "inst-4", "inst-5"]
+    assert list(df.index) == [0, 1, 2, 3]
+
+
+def test_score_candidates_flags_the_top_tenth_and_keeps_every_row():
+    rng = np.random.default_rng(0)
+    n, k = 40, 6
+    df = pd.DataFrame({
+        "instance_token": [f"inst-{i}" for i in range(n)],
+        "sample_token": [f"samp-{i}" for i in range(n)],
+        "scene_name": ["scene-a"] * n,
+        "difficulty": ["hard"] * n,
+    })
+    traj = rng.normal(size=(n, k, FUTURE_STEPS, 2))
+    logits = rng.normal(size=(n, k))
+    xgb_endpoint = rng.normal(size=(n, 2))
+
+    out = flag_uncertain.score_candidates(df, xgb_endpoint, traj, logits)
+
+    assert sorted(out["instance_token"]) == sorted(df["instance_token"])
+    assert out["uncertainty_score"].is_monotonic_decreasing
+    assert int(out["needs_review"].sum()) == round(n * flag_uncertain.TOP_FRACTION)
+    flagged_min = out.loc[out["needs_review"], "uncertainty_score"].min()
+    unflagged_max = out.loc[~out["needs_review"], "uncertainty_score"].max()
+    assert flagged_min > unflagged_max

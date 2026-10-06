@@ -7,4 +7,7 @@
 # the Makefile's tools are installed.
 python3 scripts/agent/check_style.py --changed .
 # make agent-check
+PY=traj/bin/python make lint
+PY=traj/bin/python make typecheck
+PY=traj/bin/python make numbers
 PY=traj/bin/python make test-fast

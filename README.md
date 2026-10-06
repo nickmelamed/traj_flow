@@ -375,7 +375,7 @@ autoregressive decoder structurally identical to the LSTM's:
 | LSTM (baseline) | LSTM | autoregressive | 40,963 | 0.267 | 2.738 |
 
 Swapping only the decoder, with the same encoder and data, took test/all
-minADE from 0.750 to 0.287, closing 97% of the gap to the LSTM's 0.267. It did
+minADE from 0.750 to 0.287, closing 96% of the gap to the LSTM's 0.267. It did
 so with *fewer* parameters than the original transformer (90,755 versus
 108,249, since the autoregressive decoder head is smaller than the parallel
 one), so extra capacity does not explain it. **Decoder style is the dominant

@@ -1,0 +1,12 @@
+Moving (>5m displacement) examples: 63 / 1626 total test examples.
+(Moving-subset minADE for every model is logged separately by evaluation/moving_subset_analysis.py.)
+Caption values (ADE in metres):
+  easy_typical: scene-0916 CV=9.00 fine-tuned-v2=8.06 LSTM=7.46
+  hard_improvement: scene-0103 CV=8.60 fine-tuned-v2=2.81 LSTM=3.15
+  hard_typical: scene-0916 CV=7.97 fine-tuned-v2=7.68 LSTM=2.15
+  lstm_typical: scene-0103 CV=9.33 fine-tuned-v2=8.26 LSTM=2.06
+Saved figures to /Users/nickmelamed/Desktop/GitHub/traj_flow/results/figures:
+  - easy_typical.png
+  - hard_improvement.png
+  - hard_typical.png
+  - lstm_typical.png

@@ -19,7 +19,12 @@ import pandas as pd
 from sklearn.multioutput import MultiOutputRegressor
 from xgboost import XGBRegressor
 
-from trajflow.evaluation.evaluate import filter_difficulty, future_xy, load_split, log_metrics
+from trajflow.evaluation.evaluate import (
+    filter_difficulty,
+    future_xy,
+    load_split,
+    log_metrics,
+)
 from trajflow.evaluation.metrics import batch_metrics
 from trajflow.paths import CHECKPOINTS_DIR
 

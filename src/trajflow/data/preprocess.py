@@ -31,14 +31,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from pyquaternion import Quaternion
-from tqdm import tqdm
-
 from nuscenes.eval.common.utils import angle_diff, quaternion_yaw
 from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
 from nuscenes.utils import splits as nuscenes_splits
+from pyquaternion import Quaternion
+from tqdm import tqdm
 
 from trajflow.paths import NUSCENES_ROOT as DEFAULT_DATAROOT
 from trajflow.paths import PROCESSED_DIR as DEFAULT_OUT
@@ -84,6 +83,10 @@ def build_scene_splits(val_scenes_from_train: int, version: str = "v1.0-mini", m
     `split_of_scene.get(scene_name) is None -> skip` check filters their
     samples out before any expensive PredictHelper/map work runs on them.
     """
+    # A slice like [-0:] returns the whole list, which would empty TRAIN.
+    if val_scenes_from_train < 1:
+        raise ValueError(f"val_scenes_from_train must be at least 1, got {val_scenes_from_train}")
+
     official_train, official_test = (
         (nuscenes_splits.mini_train, nuscenes_splits.mini_val)
         if version == "v1.0-mini"

@@ -41,7 +41,7 @@ def test_warm_start_falls_back_to_starting_weights_when_untrained():
     original_state = {k: v.clone() for k, v in model.state_dict().items()}
 
     df = _tiny_df(6, seed=1)
-    trained, best_val = train_loop(model, df, df, epochs=0, lr=1e-3, warm_start=True)
+    trained, _best_val = train_loop(model, df, df, epochs=0, lr=1e-3, warm_start=True)
 
     for k, v in trained.state_dict().items():
         torch.testing.assert_close(v, original_state[k])

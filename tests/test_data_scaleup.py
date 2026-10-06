@@ -1,6 +1,7 @@
+import pytest
+
 from trajflow.data.download import _required_subdirs
 from trajflow.data.preprocess import build_scene_splits
-from trajflow.paths import active_nuscenes_version
 
 
 def test_build_scene_splits_uses_mini_lists_by_default():
@@ -16,6 +17,12 @@ def test_build_scene_splits_uses_full_trainval_lists_for_other_versions():
     counts = {v: list(split_of_scene.values()).count(v) for v in ["train", "val", "test"]}
     # official train=700, val=150 scenes; 50 carved from train's tail into our val.
     assert counts == {"train": 650, "val": 50, "test": 150}
+
+
+@pytest.mark.parametrize("n", [0, -1])
+def test_build_scene_splits_rejects_fewer_than_one_val_scene(n):
+    with pytest.raises(ValueError, match="val_scenes_from_train"):
+        build_scene_splits(val_scenes_from_train=n, version="v1.0-mini")
 
 
 def test_no_scene_appears_in_more_than_one_split():

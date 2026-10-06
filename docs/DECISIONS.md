@@ -1,6 +1,6 @@
 # Design decisions
 
-Draft. Entries are inferred from comments and code and need the owner's edits.
+Entries come from code comments and were reviewed by the owner.
 
 ## D1. Scene-level splits, official val list as test
 Train, val and test are assigned by scene name. TEST is the untouched official

@@ -29,22 +29,18 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-
-from trajflow.viz.model_registry import MODEL_SPECS
-
-from trajflow.evaluation.evaluate import future_xy, load_split
-from trajflow.evaluation.metrics import batch_metrics
-from trajflow.evaluation.moving_subset_analysis import per_example_min_ade
-
 from nuscenes.map_expansion.arcline_path_utils import discretize_lane
 from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
 from nuscenes.prediction.helper import convert_global_coords_to_local
 
-from trajflow.data.preprocess import DEFAULT_DATAROOT, FUTURE_STEPS, PAST_STEPS
+from trajflow.data.preprocess import DEFAULT_DATAROOT, PAST_STEPS
+from trajflow.evaluation.evaluate import future_xy, load_split
+from trajflow.evaluation.moving_subset_analysis import per_example_min_ade
 from trajflow.paths import RESULTS_PATH as METRICS_PATH
 from trajflow.paths import active_nuscenes_version
+from trajflow.viz.model_registry import MODEL_SPECS
 
 MAP_RADIUS = 40.0
 NUMERIC_COLS = ["minADE (m)", "minFDE (m)", "Miss Rate @2m"]
@@ -223,37 +219,37 @@ def scene_browser_tab() -> None:
         dist = np.linalg.norm(line - gt, axis=-1)
         per_model_metrics[spec.label] = {"ADE (m)": dist.mean(), "FDE (m)": dist[-1]}
 
-    nusc, helper = load_nusc()
+    _nusc, helper = load_nusc()
     ann = helper.get_sample_annotation(row["instance_token"], row["sample_token"])
     x, y = ann["translation"][0], ann["translation"][1]
     polylines = nearby_lane_polylines(row["map_name"], x, y, tuple(ann["translation"]), tuple(ann["rotation"]), MAP_RADIUS)
 
     fig = go.Figure()
     for poly in polylines:
-        fig.add_trace(go.Scatter(x=poly[:, 0], y=poly[:, 1], mode="lines", line=dict(color="lightgray", width=1), showlegend=False, hoverinfo="skip"))
+        fig.add_trace(go.Scatter(x=poly[:, 0], y=poly[:, 1], mode="lines", line={"color": "lightgray", "width": 1}, showlegend=False, hoverinfo="skip"))
 
     past_x = np.array([row[f"past_x_{i}"] for i in range(PAST_STEPS)])
     past_y = np.array([row[f"past_y_{i}"] for i in range(PAST_STEPS)])
     valid = ~np.isnan(past_x)
-    fig.add_trace(go.Scatter(x=np.r_[past_x[valid], 0], y=np.r_[past_y[valid], 0], mode="lines+markers", line=dict(color="royalblue"), name="past"))
+    fig.add_trace(go.Scatter(x=np.r_[past_x[valid], 0], y=np.r_[past_y[valid], 0], mode="lines+markers", line={"color": "royalblue"}, name="past"))
 
-    fig.add_trace(go.Scatter(x=np.r_[0, gt[:, 0]], y=np.r_[0, gt[:, 1]], mode="lines", line=dict(color="magenta", width=3), name="ground truth"))
+    fig.add_trace(go.Scatter(x=np.r_[0, gt[:, 0]], y=np.r_[0, gt[:, 1]], mode="lines", line={"color": "magenta", "width": 3}, name="ground truth"))
 
     for spec in MODEL_SPECS:
         line = per_model_lines[spec.key]
         fig.add_trace(go.Scatter(
             x=np.r_[0, line[:, 0]], y=np.r_[0, line[:, 1]], mode="lines",
-            line=dict(color=spec.color, width=2, dash=spec.dash), name=spec.label,
+            line={"color": spec.color, "width": 2, "dash": spec.dash}, name=spec.label,
         ))
 
-    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers", marker=dict(color="magenta", size=16, symbol="x", line=dict(width=3, color="magenta")), name="current position"))
+    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers", marker={"color": "magenta", "size": 16, "symbol": "x", "line": {"width": 3, "color": "magenta"}}, name="current position"))
 
     fig.update_layout(
         template="plotly_white",
         xaxis_title="x (m, agent frame)", yaxis_title="y (m, agent frame, heading = +y)",
-        yaxis=dict(scaleanchor="x", scaleratio=1),
-        height=600, margin=dict(l=10, r=10, t=30, b=80),
-        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
+        yaxis={"scaleanchor": "x", "scaleratio": 1},
+        height=600, margin={"l": 10, "r": 10, "t": 30, "b": 80},
+        legend={"orientation": "h", "yanchor": "top", "y": -0.15, "xanchor": "center", "x": 0.5},
     )
 
     col_plot, col_table = st.columns([2, 1])

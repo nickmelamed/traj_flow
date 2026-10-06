@@ -31,5 +31,5 @@ def batch_metrics(preds: np.ndarray, gts: np.ndarray, miss_threshold: float = 2.
         "minADE": float(min_ade.mean()),
         "minFDE": float(min_fde.mean()),
         "MissRate@2m": float(miss.mean()),
-        "N": int(len(gts)),
+        "N": len(gts),
     }

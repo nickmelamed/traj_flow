@@ -1,0 +1,44 @@
+Moving (>5.0m displacement) examples: 63 / 1626 total test examples.
+Bootstrap: 2000 resamples, seed=0, 95% percentile CI, paired across models (same resample indices).
+  Constant Velocity                             minADE=6.6035  95% CI=[5.4427, 7.8848]  minFDE=15.5911  MissRate=0.9524
+  Constant Acceleration                         minADE=6.8534  95% CI=[5.5847, 8.2644]  minFDE=16.7437  MissRate=0.9365
+  XGBoost                                       minADE=5.3903  95% CI=[4.5914, 6.2437]  minFDE=13.1741  MissRate=0.9841
+  Transformer (pretrained, easy-only)           minADE=5.7912  95% CI=[4.8794, 6.7306]  minFDE=13.3827  MissRate=0.9206
+  Transformer (fine-tuned-v1, hard)             minADE=5.4932  95% CI=[4.6265, 6.3780]  minFDE=12.8978  MissRate=0.8889
+  Transformer (fine-tuned-v2, post-HITL)        minADE=5.4342  95% CI=[4.6200, 6.3219]  minFDE=12.8701  MissRate=0.8730
+  Transformer (fine-tuned-v2-control, no corrections) minADE=5.3676  95% CI=[4.5426, 6.2666]  minFDE=12.6532  MissRate=0.8889
+  Transformer (full-split)                      minADE=4.4767  95% CI=[3.6879, 5.2818]  minFDE=10.4562  MissRate=0.8730
+  Transformer-AR (full-split, autoregressive decoder) minADE=3.5292  95% CI=[2.9901, 4.0906]  minFDE=7.8929  MissRate=0.8889
+  LSTM (baseline)                               minADE=2.7380  95% CI=[2.3218, 3.2230]  minFDE=6.3907  MissRate=0.9206
+  LSTM (pretrained, easy-only)                  minADE=3.3982  95% CI=[2.8241, 4.0041]  minFDE=7.4590  MissRate=0.8730
+  LSTM (fine-tuned-v1, hard)                    minADE=3.1627  95% CI=[2.5849, 3.7946]  minFDE=6.8975  MissRate=0.8095
+  LSTM (fine-tuned-v2, post-HITL)               minADE=3.2188  95% CI=[2.6472, 3.8464]  minFDE=6.9258  MissRate=0.7778
+
+Ranked by minADE on moving vehicles (lower is better):
+  2.7380  LSTM (baseline)
+  3.1627  LSTM (fine-tuned-v1, hard)
+  3.2188  LSTM (fine-tuned-v2, post-HITL)
+  3.3982  LSTM (pretrained, easy-only)
+  3.5292  Transformer-AR (full-split, autoregressive decoder)
+  4.4767  Transformer (full-split)
+  5.3676  Transformer (fine-tuned-v2-control, no corrections)
+  5.3903  XGBoost
+  5.4342  Transformer (fine-tuned-v2, post-HITL)
+  5.4932  Transformer (fine-tuned-v1, hard)
+  5.7912  Transformer (pretrained, easy-only)
+  6.6035  Constant Velocity
+  6.8534  Constant Acceleration
+
+Paired bootstrap vs. Constant Velocity (fraction of the 2000 paired resamples where the model beats CV's minADE):
+  LSTM (baseline)                               beats CV in 100.0% of resamples
+  LSTM (fine-tuned-v1, hard)                    beats CV in 100.0% of resamples
+  LSTM (fine-tuned-v2, post-HITL)               beats CV in 100.0% of resamples
+  LSTM (pretrained, easy-only)                  beats CV in 100.0% of resamples
+  Transformer-AR (full-split, autoregressive decoder) beats CV in 100.0% of resamples
+  Transformer (full-split)                      beats CV in 100.0% of resamples
+  Transformer (fine-tuned-v2-control, no corrections) beats CV in 100.0% of resamples
+  XGBoost                                       beats CV in 100.0% of resamples
+  Transformer (fine-tuned-v2, post-HITL)        beats CV in 100.0% of resamples
+  Transformer (fine-tuned-v1, hard)             beats CV in 100.0% of resamples
+  Transformer (pretrained, easy-only)           beats CV in 97.8% of resamples
+  Constant Acceleration                         beats CV in 28.8% of resamples
