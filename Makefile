@@ -25,7 +25,7 @@ style:
 # Add the documents that report results, and point --sources at the
 # generated tables. Remove this target if the repo reports no results.
 numbers:
-	$(PY) scripts/agent/check_numbers.py README.md --sources results/metrics_comparison.md results/seed_variance.txt results/moving_subset.txt results/regularization_sweep.txt
+	$(PY) scripts/agent/check_numbers.py README.md --sources results/metrics_comparison.md results/seed_variance.txt results/moving_subset.txt results/regularization_sweep.txt results/derived_values.txt results/scene_overlay.txt
 
 # The fast checks the Stop hook runs before Claude may end a turn. Keep the
 # whole target under a few minutes.
